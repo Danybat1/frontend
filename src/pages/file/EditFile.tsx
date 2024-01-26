@@ -289,25 +289,58 @@ const EditFile = ({
                             res
                           );
 
-                          const parsedSigns = await parseSignatures(
-                            res?.data?.map((target) => {
-                              return {
-                                sign: target?.attributes?.sign?.data
-                                  ?.attributes,
-                                id: target?.id,
-                                createdAt: target?.attributes?.createdAt,
-                              };
-                            })
-                          ).catch((error) => {
-                            console.log(
-                              "an error has occured when creating attributes",
-                              error
+                          if (res?.data?.length > 0) {
+                            const parsedSigns = await parseSignatures(
+                              res?.data?.map((target) => {
+                                return {
+                                  sign: target?.attributes?.sign?.data
+                                    ?.attributes,
+                                  id: target?.id,
+                                  createdAt: target?.attributes?.createdAt,
+                                };
+                              })
+                            ).catch((error) => {
+                              console.log(
+                                "an error has occured when creating attributes",
+                                error
+                              );
+
+                              return [];
+                            });
+
+                            previewSignature = parsedSigns[0]?.signature;
+                          } else {
+                            const canvas = document.createElement("canvas");
+                            canvas.width = 593;
+                            canvas.height = 192;
+
+                            const ctx = canvas.getContext("2d");
+
+                            ctx.font = "60px Mr Dafoe";
+
+                            ctx.fillText(
+                              version?.author?.username,
+                              30,
+                              100,
+                              593
                             );
 
-                            return [];
-                          });
+                            const dataUrl = canvas.toDataURL();
 
-                          previewSignature = parsedSigns[0]?.signature;
+                            console.log(
+                              "current parsed image data injection other",
+                              {
+                                dataUrl,
+                              }
+                            );
+
+                            //get base64 image source data
+                            previewSignature = dataUrl;
+
+                            console.log("current parsed image data", {
+                              previewSignature,
+                            });
+                          }
                         })
                       );
                     }
@@ -1371,9 +1404,7 @@ const EditFile = ({
 
                         injectData();
 
-                        navigate("/requests/all", {
-                          replace: true,
-                        });
+                        navigate("/requests/all");
                       })
                       .catch((error) => {
                         console.log(

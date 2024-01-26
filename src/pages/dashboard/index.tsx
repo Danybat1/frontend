@@ -117,7 +117,7 @@ const Dashboard = ({}) => {
                   onClick={(event) => {
                     event?.preventDefault();
 
-                    navigate(target?.link, { replace: true });
+                    navigate(target?.link);
                   }}
                   sx={{
                     bgcolor: theme?.palette?.common?.white,
@@ -257,9 +257,7 @@ const Dashboard = ({}) => {
                       onClick={(event) => {
                         event?.preventDefault();
 
-                        navigate(`/envelope/${target?.id}/documents`, {
-                          replace: true,
-                        });
+                        navigate(`/envelope/${target?.id}/documents`);
                       }}
                       className={"card-box"}
                       sx={{

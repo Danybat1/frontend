@@ -321,7 +321,7 @@ const DocumentView = ({}) => {
           pdfName={pdfName}
           setPdfName={setPdfName}
           cancelFile={() => {
-            navigate("/mydocuments", { replace: true });
+            navigate("/mydocuments");
           }}
           totalPages={totalPages}
           nextMenu={() => {

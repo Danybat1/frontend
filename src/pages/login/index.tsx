@@ -79,9 +79,12 @@ const LoginForm = ({}) => {
               sessionStorage.setItem("userId", res?.user?.id);
               sessionStorage.setItem("username", res?.user?.username);
               sessionStorage.setItem("email", res?.user?.email);
-              sessionStorage.setItem("email", res?.user?.email);
+              sessionStorage.setItem(
+                "profile",
+                `${process.env.REACT_APP_API_HOST}${res?.user?.profile?.url}`
+              );
 
-              navigate("/dashboard", { replace: true });
+              navigate("/dashboard");
 
               setTimeout(() => {
                 window?.location?.reload();
@@ -229,6 +232,21 @@ const LoginForm = ({}) => {
               </button>
             </Box>
           </Stack>
+          <Typography
+            component={"a"}
+            target={"_blank"}
+            href={`${process.env.REACT_APP_API_HOST}/admin`}
+            sx={{
+              mt: "1.5rem",
+              fontSize: "14px",
+              textAlign: "center",
+              fontWeight: theme?.typography?.fontWeightBold,
+              textDecoration: "underline",
+              color: theme?.palette?.primary?.main,
+            }}
+          >
+            Se connecter comme admin
+          </Typography>
           <Typography
             sx={{
               mt: "1.5rem",

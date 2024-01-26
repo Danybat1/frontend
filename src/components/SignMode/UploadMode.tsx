@@ -130,7 +130,7 @@ const UploadMode = ({
 
                           handleSaveBtnMessage();
 
-                          navigate("/mydocuments/sign", { replace: true });
+                          navigate("/mydocuments/sign");
 
                           setTimeout(() => {
                             window?.location?.reload();

@@ -115,7 +115,7 @@ const Layout = ({ children }: Props) => {
           ariaLabel="create document"
           onClick={(event) => {
             event?.preventDefault();
-            navigate("/mydocuments/new-document", { replace: true });
+            navigate("/mydocuments/new-document",);
           }}
           sx={{
             position: "fixed",
@@ -280,7 +280,7 @@ const Layout = ({ children }: Props) => {
                       return (
                         <MenuItem
                           onClick={() => {
-                            navigate(_child?.link, { replace: true });
+                            navigate(_child?.link);
                           }}
                           sx={{
                             bgcolor: window?.location?.pathname?.includes(
@@ -401,7 +401,7 @@ const Layout = ({ children }: Props) => {
                   return (
                     <Stack
                       onClick={() => {
-                        navigate(target?.link, { replace: true });
+                        navigate(target?.link);
                       }}
                       direction={"row"}
                       sx={{
@@ -593,7 +593,7 @@ const Layout = ({ children }: Props) => {
                             return (
                               <MenuItem
                                 onClick={() => {
-                                  navigate(_child?.link, { replace: true });
+                                  navigate(_child?.link);
                                 }}
                                 sx={{
                                   bgcolor: window?.location?.pathname?.includes(
@@ -629,7 +629,7 @@ const Layout = ({ children }: Props) => {
                         onClick={(event) => {
                           event?.preventDefault();
 
-                          navigate(target?.link, { replace: true });
+                          navigate(target?.link);
                         }}
                         sx={{
                           width: "50px",

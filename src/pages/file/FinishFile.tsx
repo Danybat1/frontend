@@ -241,7 +241,7 @@ const FinishFile = ({ pdfName, setPdfName, finishPdf, totalPages }: props) => {
 
                         alert(`Document signé avec succès`);
 
-                        navigate("/mydocuments", { replace: true });
+                        navigate("/mydocuments");
 
                         setTimeout(() => {
                           window?.location?.reload();

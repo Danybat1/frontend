@@ -116,6 +116,38 @@ const AppDataContext = ({ children }) => {
           if (!onlyDocs) {
             const _signatures = (await parseSignatures(res?.signatures)) || [];
 
+            if (_signatures?.length < 1) {
+              const canvas = document.createElement("canvas");
+              canvas.width = 593;
+              canvas.height = 192;
+
+              const ctx = canvas.getContext("2d");
+
+              ctx.font = "60px Mr Dafoe";
+
+              ctx.fillText(
+                sessionStorage?.getItem("username"),
+                30 +
+                  (29.65 * (20 - sessionStorage?.getItem("username")?.length)) /
+                    2,
+                100,
+                593
+              );
+
+              const dataUrl = canvas.toDataURL();
+
+              console.log(
+                "================================= current text signature ",
+                { dataUrl }
+              );
+
+              _signatures?.push({
+                signature: dataUrl,
+                id: 1,
+                createdAt: new Date()?.toISOString(),
+              });
+            }
+
             setSignatures(_signatures);
           }
         })

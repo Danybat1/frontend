@@ -45,6 +45,14 @@
 $ npm install
 ```
 
+### Env file creation following the installation guide format
+
+### Compiling
+
+```
+$ npm run build
+```
+
 ### Start Dev Server
 
 ```

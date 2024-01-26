@@ -22,7 +22,7 @@ const Head = () => {
           page.classTag
         } cursor-pointer p-3 ${currentPageIdx === idx && "active"}`}
         onClick={() => {
-          navigate(page.path, { replace: true });
+          navigate(page.path);
 
           if (flat) {
             setOpenMenu(false);

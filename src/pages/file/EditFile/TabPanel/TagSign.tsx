@@ -281,7 +281,7 @@ const TagSign = ({ uploadFinalFile }) => {
 
                   injectData();
 
-                  navigate("/requests/all", { replace: true });
+                  navigate("/requests/all");
                 } else {
                   alert("Une erreur est survenue, Réessayer");
 

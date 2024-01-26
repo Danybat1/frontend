@@ -161,7 +161,7 @@ const DocumentsList = ({ rows, firstTitle = "Linzaka", secondTitle }) => {
                   JSON.stringify(row?.recipients)
                 );
 
-                navigate(`/mydocuments/${row?.id}`, { replace: true });
+                navigate(`/mydocuments/${row?.id}`);
               }
             }
           }}
