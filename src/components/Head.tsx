@@ -34,7 +34,7 @@ const Head = () => {
     ));
 
   return (
-    <>
+    <div>
       <header
         className="relative top-0 z-50 grid w-full grid-cols-[max-content_minmax(465px,_max-content)]
         justify-between px-5 py-4 flat:grid-cols-[repeat(2,_max-content)]
@@ -77,7 +77,7 @@ const Head = () => {
         } `}
       >
         {openMenu && (
-          <>
+          <div>
             {MenuList(true)}
             <div className="mt-4 flex items-center gap-2">
               <div className="rounded-full p-1 outline outline-1 outline-black/20">
@@ -88,10 +88,10 @@ const Head = () => {
               </div>
               Membres
             </div>
-          </>
+          </div>
         )}
       </ul>
-    </>
+    </div>
   );
 };
 

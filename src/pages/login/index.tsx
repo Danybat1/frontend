@@ -7,18 +7,30 @@ import CssBaseline from "@mui/material/CssBaseline";
 import TextField from "@mui/material/TextField";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import Checkbox from "@mui/material/Checkbox";
-import Link from "@mui/material/Link";
 import Grid from "@mui/material/Grid";
 import Box from "@mui/material/Box";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import Typography from "@mui/material/Typography";
 import Container from "@mui/material/Container";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { guardCtx } from "../../context/Guard";
 import { documentsCtx } from "../../context/documents";
 import { signaturesCtx } from "../../context/signatures";
-import { Stack, useMediaQuery, useTheme } from "@mui/material";
+import {
+  Stack,
+  useMediaQuery,
+  useTheme,
+  Link as MuiLink,
+  InputAdornment,
+  IconButton,
+} from "@mui/material";
+import { usersCtx } from "../../context/users";
+import { BASE_URL } from "../../constants/api";
+import { notificationCtx } from "../../context/notification";
+
+import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 
 function Copyright(props) {
   return (
@@ -29,9 +41,13 @@ function Copyright(props) {
       {...props}
     >
       {"Copyright © Powered by "} <br />
-      <Link color="inherit" href="https://rhinocerosoftware.co">
+      <MuiLink
+        color="inherit"
+        target="_blank"
+        href="https://rhinocerosoftware.co"
+      >
         Rhinoceros Software SAS
-      </Link>{" "}
+      </MuiLink>{" "}
       {new Date().getFullYear()}
       {"."}
     </Typography>
@@ -45,6 +61,12 @@ const LoginForm = ({}) => {
     sessionStorage?.clear();
   }, []);
 
+  const [showPassword, setShowPassword] = React.useState(false);
+
+  const handleShowPassword = () => {
+    setShowPassword((show) => !show);
+  };
+
   const authCtx = React?.useContext(guardCtx);
 
   const setIsUserAuthenticated = authCtx?.setIsUserAuthenticated;
@@ -56,7 +78,7 @@ const LoginForm = ({}) => {
     const _headers = new Headers();
     _headers?.append("Content-Type", "application/json");
 
-    await lookup(`${process.env.REACT_APP_API_HOST}/api/auth/local`, {
+    await lookup(`${BASE_URL}/api/auth/local`, {
       method: "POST",
       body: JSON.stringify({
         identifier: data.get("email")?.toString(),
@@ -81,30 +103,29 @@ const LoginForm = ({}) => {
               sessionStorage.setItem("email", res?.user?.email);
               sessionStorage.setItem(
                 "profile",
-                `${process.env.REACT_APP_API_HOST}${res?.user?.profile?.url}`
+                `${BASE_URL}${res?.user?.profile?.url}`
               );
+              sessionStorage.setItem("role", res?.user?.role);
 
               navigate("/dashboard");
-
-              setTimeout(() => {
-                window?.location?.reload();
-              }, 500);
             } else {
-              alert("Mauvaises entrées detectées");
+              showError("Mauvaises entrées detectées");
             }
           })
           .catch((error) => {
             console.log("an error has occured when trying to login", error);
-            alert("Mauvaises entrées detectées");
+            showError("Mauvaises entrées detectées");
           })
       )
       .catch((error) => {
         console.log("an error has occured when trying to login", error);
-        alert("Mauvaises entrées detectées");
+        showError("Mauvaises entrées detectées");
       });
   };
 
   const theme = useTheme();
+
+  const showError = React?.useContext(notificationCtx)?.showError;
 
   const screen900 = useMediaQuery(theme?.breakpoints?.down(900));
 
@@ -167,7 +188,8 @@ const LoginForm = ({}) => {
             src={"/images/logo.png"}
             style={{
               msOverflowY: "2rem",
-              width: "100px",
+              // width: "100px",
+              marginBottom: "1rem",
             }}
           />
           <Typography
@@ -208,7 +230,20 @@ const LoginForm = ({}) => {
               fullWidth
               name="password"
               label="Mot de passe"
-              type="password"
+              type={showPassword ? "text" : "password"}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton onClick={handleShowPassword} edge="end">
+                      {showPassword ? (
+                        <VisibilityOffIcon />
+                      ) : (
+                        <VisibilityIcon />
+                      )}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
               id="password"
               autoComplete="current-password"
             />
@@ -232,12 +267,10 @@ const LoginForm = ({}) => {
               </button>
             </Box>
           </Stack>
-          <Typography
-            component={"a"}
-            target={"_blank"}
-            href={`${process.env.REACT_APP_API_HOST}/admin`}
-            sx={{
-              mt: "1.5rem",
+          <Link
+            to={`/auth/forgot-password`}
+            style={{
+              marginTop: "1.5rem",
               fontSize: "14px",
               textAlign: "center",
               fontWeight: theme?.typography?.fontWeightBold,
@@ -245,8 +278,8 @@ const LoginForm = ({}) => {
               color: theme?.palette?.primary?.main,
             }}
           >
-            Se connecter comme admin
-          </Typography>
+            Mot de passe oublié ?
+          </Link>
           <Typography
             sx={{
               mt: "1.5rem",

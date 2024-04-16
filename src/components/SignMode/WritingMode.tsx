@@ -14,6 +14,9 @@ import InputTextField from "../InputTextField";
 import { Box, CircularProgress, Stack, useTheme } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { Upload } from "react-feather";
+import { guardCtx } from "../../context/Guard";
+import { BASE_URL } from "../../constants/api";
+import { notificationCtx } from "../../context/notification";
 
 interface props {
   ActiveMenu: number;
@@ -43,6 +46,7 @@ const WritingMode = ({
 
   const navigate = useNavigate();
   const theme = useTheme();
+  const showError = React?.useContext(notificationCtx)?.showError;
 
   const [isFetching, setIsFetching] = React?.useState(false);
 
@@ -108,8 +112,12 @@ const WritingMode = ({
     canvasHistory = sigCanvas.current.toData().concat();
   };
 
+  const setLoadingMap = React?.useContext(guardCtx)?.setLoadingMap;
+
   const saveCanvas = async () => {
     setIsFetching(true);
+
+    setLoadingMap(true, "writing_mode");
 
     const DataURL: HTMLCanvasElement = sigCanvas.current
       .getTrimmedCanvas()
@@ -143,7 +151,7 @@ const WritingMode = ({
 
     let mediaId = null;
 
-    await lookup(`${process.env.REACT_APP_API_HOST}/api/upload`, {
+    await lookup(`${BASE_URL}/api/upload`, {
       method: "POST",
       headers: _headers,
       body: form,
@@ -169,7 +177,7 @@ const WritingMode = ({
 
               console.log("will post new signature");
 
-              await lookup(`${process.env.REACT_APP_API_HOST}/api/signatures`, {
+              await lookup(`${BASE_URL}/api/signatures`, {
                 headers: _postHeaders,
                 body: JSON.stringify({
                   data: {
@@ -212,7 +220,7 @@ const WritingMode = ({
 
                       setIsFetching(false);
 
-                      alert("Une errerur essurvenue, réessayer");
+                      showError("Une errerur essurvenue, réessayer");
                     })
                 )
                 .catch((error) => {
@@ -223,7 +231,7 @@ const WritingMode = ({
 
                   setIsFetching(false);
 
-                  alert("Une errerur essurvenue, réessayer");
+                  showError("Une errerur essurvenue, réessayer");
                 });
             }
           })
@@ -235,7 +243,7 @@ const WritingMode = ({
 
             setIsFetching(false);
 
-            alert("Oups! Réessayer");
+            showError("Oups! Réessayer");
           });
       })
       .catch((error) => {
@@ -246,8 +254,10 @@ const WritingMode = ({
 
         setIsFetching(false);
 
-        alert("Oups! Réessayer");
+        showError("Oups! Réessayer");
       });
+
+    setLoadingMap(false, "writing_mode");
   };
 
   useClickOutside(colorRef, () => setIsOpenColor(false));

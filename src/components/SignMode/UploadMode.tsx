@@ -8,6 +8,9 @@ import { signAtom } from "../../jotai";
 import DragUpload from "../DragUpload";
 import { useNavigate } from "react-router-dom";
 import { CircularProgress, useTheme } from "@mui/material";
+import { guardCtx } from "../../context/Guard";
+import { BASE_URL } from "../../constants/api";
+import { notificationCtx } from "../../context/notification";
 
 interface props {
   ActiveMenu: number;
@@ -36,16 +39,21 @@ const UploadMode = ({
   };
 
   const theme = useTheme();
-
   const navigate = useNavigate();
 
   const [isFetching, setIsFetching] = React?.useState(false);
+  const setLoadingMap = React?.useContext(guardCtx)?.setLoadingMap;
+
+  const showError = React?.useContext(notificationCtx)?.showError;
+  const showWarning = React?.useContext(notificationCtx)?.showWarning;
 
   const saveUpload = async () => {
     if (!imageURL) {
-      alert("Veuillez selection le fichier de signature");
+      showWarning("Veuillez selection le fichier de signature");
       return;
     }
+
+    setLoadingMap(true, "upload_mode");
 
     setIsFetching(true);
 
@@ -77,7 +85,7 @@ const UploadMode = ({
 
     let mediaId = null;
 
-    await lookup(`${process.env.REACT_APP_API_HOST}/api/upload`, {
+    await lookup(`${BASE_URL}/api/upload`, {
       method: "POST",
       headers: _headers,
       body: form,
@@ -103,7 +111,7 @@ const UploadMode = ({
 
               console.log("will post new signature");
 
-              await lookup(`${process.env.REACT_APP_API_HOST}/api/signatures`, {
+              await lookup(`${BASE_URL}/api/signatures`, {
                 headers: _postHeaders,
                 body: JSON.stringify({
                   data: {
@@ -146,7 +154,7 @@ const UploadMode = ({
 
                       setIsFetching(false);
 
-                      alert("Une errerur essurvenue, réessayer");
+                      showError("Une errerur essurvenue, réessayer");
                     })
                 )
                 .catch((error) => {
@@ -157,7 +165,7 @@ const UploadMode = ({
 
                   setIsFetching(false);
 
-                  alert("Une errerur essurvenue, réessayer");
+                  showError("Une errerur essurvenue, réessayer");
                 });
             }
           })
@@ -169,7 +177,7 @@ const UploadMode = ({
 
             setIsFetching(false);
 
-            alert("Oups! Réessayer");
+            showError("Oups! Réessayer");
           });
       })
       .catch((error) => {
@@ -180,8 +188,10 @@ const UploadMode = ({
 
         setIsFetching(false);
 
-        alert("Oups! Réessayer");
+        showError("Oups! Réessayer");
       });
+
+    setLoadingMap(false, "upload_mode");
   };
 
   return (
@@ -232,7 +242,7 @@ const UploadMode = ({
             onClick={saveUpload}
           >
             {!isFetching ? (
-              <React.Fragment>Envoyer</React.Fragment>
+              <div>Envoyer</div>
             ) : (
               <CircularProgress
                 size={"1rem"}

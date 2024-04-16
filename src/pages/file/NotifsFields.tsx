@@ -7,7 +7,7 @@ const NotifsFields = ({ setNotifications, notifications }) => {
   const theme = useTheme();
 
   return (
-    <React.Fragment>
+    <div>
       <div className="tag-element">
         <p>Notifications</p>
         <Box
@@ -29,7 +29,7 @@ const NotifsFields = ({ setNotifications, notifications }) => {
           />
         </Box>
       </div>
-    </React.Fragment>
+    </div>
   );
 };
 

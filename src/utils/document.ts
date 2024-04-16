@@ -1,6 +1,8 @@
 
 // utility function definition
 
+import { BASE_URL } from "../constants/api";
+
 const parseDocuments = (docObjects) => {
   return docObjects?.sort((prev, next) => {
     return new Date(next?.createdAt).getTime() - new Date(prev?.createdAt).getTime()
@@ -15,7 +17,7 @@ const parseDocuments = (docObjects) => {
         fullName:
           target?.author?.username,
         id: target?.author?.id,
-        profile: `${process.env.REACT_APP_API_HOST}${target?.author?.profile?.url}`
+        profile: `${BASE_URL}${target?.author?.profile?.url}`
       },
       title: target?.title,
       recipients: target?.recipients?.map(
@@ -23,7 +25,7 @@ const parseDocuments = (docObjects) => {
           return {
             fullName: recipient?.username,
             id: recipient?.id,
-            profile: `${process.env.REACT_APP_API_HOST}${recipient?.profile?.url}`,
+            profile: `${BASE_URL}${recipient?.profile?.url}`,
             email: recipient?.email,
             department:
               recipient?.department?.name,
@@ -42,7 +44,7 @@ const parseDocuments = (docObjects) => {
       file: {
         name: target?.file?.data
           ?.name,
-        path: `${process.env.REACT_APP_API_HOST}${target?.file?.url}`,
+        path: `${BASE_URL}${target?.file?.url}`,
       },
       versionId: target?.versionId,
       rejectedBy: target?.rejectedBy,
@@ -55,7 +57,7 @@ const parseDocuments = (docObjects) => {
       attachedFiles: target?.attachedFiles?.map(file => {
         return {
           name: file?.name,
-          path: `${process.env.REACT_APP_API_HOST}${file?.url}`,
+          path: `${BASE_URL}${file?.url}`,
         }
       }),
       levelVersions : target?.levelVersions,
@@ -65,7 +67,7 @@ const parseDocuments = (docObjects) => {
   });
 };
 
-const parseSignatures = async (signatures, notProcessImage = false) => {
+const parseSignatures = async (signatures, notProcessImage = false, setLoadingMap=() => {}) => {
   return Promise.all(
     signatures?.map((target, index) => {
 
@@ -74,17 +76,22 @@ const parseSignatures = async (signatures, notProcessImage = false) => {
 
 
       return  lookup(
-        `${notProcessImage ? window?.location?.origin : process.env.REACT_APP_API_HOST}${target?.sign?.url}`
+        `${notProcessImage ? window?.location?.origin : BASE_URL}${target?.sign?.url}`
       )
         .then((res) =>
           res
             .blob()
             .then((_sign) => {
+
+              setLoadingMap(true, "_documents");
+
               const sign = new File([_sign], `sign${index}`, {
                 type: "image/png",
               });
 
               const signLocalUrl = URL.createObjectURL(sign);
+
+        setLoadingMap(false, "_documents")
 
               return {
                 id: target?.id,
@@ -103,6 +110,8 @@ const parseSignatures = async (signatures, notProcessImage = false) => {
               );
 
               return {};
+
+        setLoadingMap(false, "_documents")
             })
         )
         .catch((error) => {
@@ -111,8 +120,11 @@ const parseSignatures = async (signatures, notProcessImage = false) => {
             error
           );
 
+        setLoadingMap(false, "_documents")
+
           return {};
         });
+
     })
   );
 }

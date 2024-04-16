@@ -10,9 +10,12 @@ import SelectSignee from "../../../components/SelectSignee";
 import { currDocumentCtx } from "../../../context/currDocument";
 import NotifsFields from "../NotifsFields";
 import AttachedFiles from "../../../components/AttachedFiles";
+import { paraphCtx } from "../../paraph";
 
 const TabPanel = ({ uploadFinalFile, setNotifications, notifications }) => {
   const [isDocumentNew, setIsDocumentNew] = React.useState(false);
+
+  const isParaph = React?.useContext(paraphCtx)?.isParaph;
 
   React?.useEffect(() => {
     console.log("current pathname string", window?.location?.pathname);
@@ -24,6 +27,8 @@ const TabPanel = ({ uploadFinalFile, setNotifications, notifications }) => {
 
   // console.log("received document status", { isDocumentNew });
 
+  const annexContext = sessionStorage?.getItem("annexes-data")?.length > 1;
+
   return (
     <Box
       className="flat-list flex flex-col gap-8 flat:flex-row flat:px-6"
@@ -34,7 +39,7 @@ const TabPanel = ({ uploadFinalFile, setNotifications, notifications }) => {
         pb: "2rem",
       }}
     >
-      {isDocumentNew ? (
+      {isDocumentNew && !annexContext ? (
         <NotifsFields
           setNotifications={setNotifications}
           notifications={notifications}
@@ -43,7 +48,7 @@ const TabPanel = ({ uploadFinalFile, setNotifications, notifications }) => {
         ""
       )}
       <TagSign uploadFinalFile={uploadFinalFile} />
-      {isDocumentNew ? <TagField /> : ""}
+      {isDocumentNew && !annexContext ? <TagField /> : ""}
       <Cosigners />
       <AttachedFiles />
     </Box>

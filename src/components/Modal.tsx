@@ -64,7 +64,7 @@ const Modal = ({ children, childrenClassName = "", small }: props) => {
       modalContent
     )
   ) : (
-    <></>
+    ""
   );
 };
 

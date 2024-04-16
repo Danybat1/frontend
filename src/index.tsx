@@ -15,6 +15,8 @@ import UsersContext from "./context/users";
 import AppDataContext from "./context/appData";
 import CurrDocumentContext from "./context/currDocument";
 import FilesContext from "./context/files";
+import RolesContext from "./context/rolesCtx";
+import NotificationContext from "./context/notification";
 
 const root = ReactDOM.createRoot(
   document.getElementById("root") as HTMLElement
@@ -24,21 +26,25 @@ root.render(
   <BrowserRouter basename={"/"}>
     <ThemeContext>
       <CssBaseline />
-      <GuardContext>
-        <UsersContext>
-          <DocumentContext>
-            <SignaturesContext>
-              <AppDataContext>
-                <CurrDocumentContext>
-                  <FilesContext>
-                    <App />
-                  </FilesContext>
-                </CurrDocumentContext>
-              </AppDataContext>
-            </SignaturesContext>
-          </DocumentContext>
-        </UsersContext>
-      </GuardContext>
+      <NotificationContext>
+        <GuardContext>
+          <RolesContext>
+            <UsersContext>
+              <DocumentContext>
+                <SignaturesContext>
+                  <AppDataContext>
+                    <CurrDocumentContext>
+                      <FilesContext>
+                        <App />
+                      </FilesContext>
+                    </CurrDocumentContext>
+                  </AppDataContext>
+                </SignaturesContext>
+              </DocumentContext>
+            </UsersContext>
+          </RolesContext>
+        </GuardContext>
+      </NotificationContext>
       <Message />
     </ThemeContext>
   </BrowserRouter>

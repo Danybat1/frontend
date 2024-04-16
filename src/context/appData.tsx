@@ -10,11 +10,13 @@ import { useNavigate } from "react-router-dom";
 import { socketCtx } from "./io";
 import { Stack, Typography } from "@mui/material";
 import { Close } from "@mui/icons-material";
+import { BASE_URL } from "../constants/api";
+import textToImage from "../utils/textToImage";
 
 const appDataCtx = React?.createContext({});
 
 class AppData {
-  static async getUserData() {
+  static async getUserData(setLoading = () => {}) {
     const _headers = new Headers();
 
     _headers?.append("Content-Type", "application/json");
@@ -23,10 +25,12 @@ class AppData {
       `Bearer ${sessionStorage?.getItem("token")}`
     );
 
+    setLoading(true);
+
+    console.log("fetching user's data ...");
+
     return lookup(
-      `${process.env.REACT_APP_API_HOST}/api/users/${sessionStorage?.getItem(
-        "userId"
-      )}`,
+      `${BASE_URL}/api/users/${sessionStorage?.getItem("userId")}`,
       {
         headers: _headers,
       }
@@ -67,88 +71,94 @@ const AppDataContext = ({ children }) => {
 
   const navigate = useNavigate();
 
+  const setLoadingMap = React?.useContext(guardCtx)?.setLoadingMap;
+
   const injectData = (onlyDocs = false) => {
     (async () => {
-      await AppData.getUserData()
+      setLoadingMap(true, "app_data_documents");
+
+      await AppData.getUserData(setLoadingMap)
         .then(async (res) => {
-          console.log("fetched all of the user data");
+          setLoadingMap(true, "app_data_documents_core");
+          try {
+            console.log("fetched all of the user data");
 
-          const _documents = {
-            own: parseDocuments(res?.ownDocs || []),
-            signed: parseDocuments([...res?.signedDocs] || []),
-            pending: parseDocuments(res?.pendingDocs)?.filter((doc) => {
-              console.log(
-                "checking some doc obj attributes",
-                !(doc?.signedBy?.length - doc?.recipients?.length === 1) ||
+            const _documents = {
+              own: res?.ownDocs || [],
+              signed: [...res?.signedDocs] || [],
+              pending: res?.pendingDocs?.filter((doc) => {
+                console.log(
+                  "checking some doc obj attributes",
+                  !(doc?.signedBy?.length - doc?.recipients?.length === 1) ||
+                    doc?.signedBy?.length === 1
+                );
+
+                return (
+                  !(doc?.signedBy?.length - doc?.recipients?.length === 1) ||
                   doc?.signedBy?.length === 1
-              );
+                );
+              }),
+            };
 
-              return (
-                !(doc?.signedBy?.length - doc?.recipients?.length === 1) ||
-                doc?.signedBy?.length === 1
-              );
-            }),
-          };
-
-          _documents.signed = [
-            ..._documents?.signed,
-            ..._documents?.pending?.filter((doc) => {
-              return doc?.rejectedBy?.reason?.length > 0;
-            }),
-          ];
-
-          _documents.pending = _documents?.pending?.filter((doc) => {
-            return !(doc?.rejectedBy?.reason?.length > 0);
-          });
-
-          _documents["all"] = [
-            ..._documents["signed"],
-            ..._documents["pending"],
-          ]?.sort((prev, next) => {
-            return (
-              new Date(next?.createdAt).getTime() -
-              new Date(prev?.createdAt).getTime()
+            _documents.signed?.push(
+              ..._documents?.pending?.filter((doc) => {
+                return doc?.rejectedBy?.reason?.length > 0;
+              })
             );
-          });
 
-          setDocuments(_documents);
+            _documents.pending = _documents?.pending?.filter((doc) => {
+              return !(doc?.rejectedBy?.reason?.length > 0);
+            });
 
-          if (!onlyDocs) {
-            const _signatures = (await parseSignatures(res?.signatures)) || [];
-
-            if (_signatures?.length < 1) {
-              const canvas = document.createElement("canvas");
-              canvas.width = 593;
-              canvas.height = 192;
-
-              const ctx = canvas.getContext("2d");
-
-              ctx.font = "60px Mr Dafoe";
-
-              ctx.fillText(
-                sessionStorage?.getItem("username"),
-                30 +
-                  (29.65 * (20 - sessionStorage?.getItem("username")?.length)) /
-                    2,
-                100,
-                593
+            _documents["all"] = [
+              ..._documents["signed"],
+              ..._documents["pending"],
+            ]?.sort((prev, next) => {
+              return (
+                new Date(next?.createdAt).getTime() -
+                new Date(prev?.createdAt).getTime()
               );
+            });
 
-              const dataUrl = canvas.toDataURL();
+            setDocuments(_documents);
+          } catch (error) {
+            console.log(
+              "an error has occured when processing documents",
+              error
+            );
+          }
 
-              console.log(
-                "================================= current text signature ",
-                { dataUrl }
-              );
+          setLoadingMap(false, "app_data_documents_core");
 
-              _signatures?.push({
-                signature: dataUrl,
-                id: 1,
-                createdAt: new Date()?.toISOString(),
-              });
+          try {
+            if (!onlyDocs) {
+              const _signatures =
+                (await parseSignatures(
+                  res?.signatures,
+                  false,
+                  setLoadingMap
+                )) || [];
+
+              setLoadingMap(true, "app_data_signatures");
+
+              if (_signatures?.length < 1) {
+                _signatures?.push({
+                  signature: textToImage({
+                    text: sessionStorage?.getItem("username"),
+                  }),
+                  id: 1,
+                  createdAt: new Date()?.toISOString(),
+                });
+              }
+
+              setSignatures(_signatures);
+
+              setLoadingMap(false, "app_data_signatures");
             }
+          } catch (error) {
+            console.log("an error has occured when processing signatures");
 
-            setSignatures(_signatures);
+            setLoadingMap(false, "app_data_signatures");
           }
         })
         .catch((error) => {
@@ -157,18 +167,25 @@ const AppDataContext = ({ children }) => {
             error
           );
         });
+
+      setLoadingMap(false, "app_data_documents");
     })();
   };
 
   React?.useEffect(() => {
     if (isUserAuthenticanted) {
+      setLoadingMap(true, "app_data");
+
       injectData();
+      setLoadingMap(false, "app_data");
     } else {
-      navigate("/login", {
-        replace: true,
-      });
+      if (!window?.location?.pathname?.includes("-password")) {
+        navigate("/login", { replace: true });
+      } else {
+        console.log("prevented moving to login as we are trating passwords");
+      }
     }
-  }, []);
+  }, [isUserAuthenticanted]);
 
   React?.useEffect(() => {
     const notifAudio = new Audio("/sounds/notification.mp3");

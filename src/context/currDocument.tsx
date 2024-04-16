@@ -7,6 +7,11 @@ const currDocumentCtx = React?.createContext({});
 const CurrDocumentContext = ({ children }) => {
   const [isDocumentNew, setIsDocumentNew] = React.useState(false);
 
+  const [representationMode, setRepresentationMode] = React?.useState({
+    active: false,
+    finalSignee: {},
+  });
+
   React?.useEffect(() => {
     console.log("current pathname string", window?.location?.pathname);
 
@@ -20,6 +25,8 @@ const CurrDocumentContext = ({ children }) => {
       value={{
         isDocumentNew,
         setIsDocumentNew,
+        representationMode,
+        setRepresentationMode,
       }}
     >
       {children}

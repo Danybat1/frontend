@@ -1,9 +1,9 @@
 // headers utility function definition
 
-const getHeaders = ({}) => {
+const getHeaders = ({contentType = "application/json"}) => {
   const headers = new Headers();
 
-  headers.append("Content-Type", "application/json");
+  headers.append("Content-Type", contentType);
 
   // headers.append("Accept", "application/json");
 

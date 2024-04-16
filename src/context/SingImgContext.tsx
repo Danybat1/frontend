@@ -1,4 +1,6 @@
-import { createContext } from 'react'
+// context definition
+
+import { createContext } from "react";
 
 interface SingImgType {
   canvas: fabric.Canvas[];
@@ -6,6 +8,6 @@ interface SingImgType {
   getAddLocation: (showWidth?: boolean) => AddLocationType;
 }
 
-const SingImgContext = createContext({} as SingImgType)
+const SingImgContext = createContext({} as SingImgType);
 
-export default SingImgContext
+export default SingImgContext;

@@ -10,24 +10,32 @@ import FinishFile from "./FinishFile";
 import FinishUpload from "./FinishUpload";
 import DragUpload from "../../components/DragUpload";
 import Intro from "../../components/Intro";
-import { uploadTypeName } from "../../constants/EnumType";
 import { FileNameDefault } from "../../constants/FileSetting";
 import { fileAtom } from "../../jotai";
 import Layout from "../../components/Layout";
 import { Box, Stack } from "@mui/material";
+import { filesCtx } from "../../context/files";
+import ConfigureParaph from "./ConfigureParaph";
+import { useNavigate } from "react-router-dom";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
 
 const File = () => {
+  const fileContext = React?.useContext(filesCtx);
+
   const [stepMenu, setStepMenu] = useState<number>(0);
-  const [pdfURL, setPdfURL] =
-    useAtom<PrimitiveAtom<pdfFileType[] | null>>(fileAtom);
-  const [pdfName, setPdfName] = useState<string>(FileNameDefault);
-  const [totalPages, setTotalPages] = useState<number>(0);
-  const [progressBar, setProgressBar] = useState<number>(0);
+  const pdfURL = fileContext?.pdfURL;
+  const setPdfURL = fileContext?.setPdfURL;
+
+  const pdfName = fileContext?.pdfName;
+  const setPdfName = fileContext?.setPdfName;
+  const totalPages = fileContext?.totalPages;
+  const setTotalPages = fileContext?.setTotalPages;
+  const progressBar = fileContext?.progressBar;
+  const setProgressBar = fileContext?.setProgressBar;
   const [finishPdf, setFinishPdf] = useState<(HTMLCanvasElement | null)[]>([]); // get finish pdf
 
-  useEffect(() => {
+  React?.useEffect(() => {
     document.body.classList.add("file");
     document.body.classList.remove("sign");
 
@@ -35,17 +43,30 @@ const File = () => {
     sessionStorage?.removeItem("currDocId");
 
     return () => {
+      console?.clear();
+
+      console?.log("current pdf url o be removed", { pdfURL });
       setPdfURL(null);
     };
   }, []);
+
+  const navigate = useNavigate();
 
   React?.useEffect(() => {
     sessionStorage.setItem("collabs", "[]");
     sessionStorage.setItem("versions-queue", "[]");
   }, []);
 
-  useEffect(() => {
-    if (pdfURL) return setStepMenu(1);
+  React.useEffect(() => {
+    if (
+      pdfURL &&
+      (!(sessionStorage?.getItem("annexes-data")?.length > 1) || true)
+    ) {
+      return setStepMenu(1);
+    } else if (sessionStorage?.getItem("annexes-data")?.length > 1 && pdfURL) {
+      // navigate("/mydocuments/new-document/annexes");
+    }
+
     return undefined;
   }, [pdfURL]);
 
@@ -78,45 +99,28 @@ const File = () => {
 
   const fileElement: { [index: number]: JSX.Element } = {
     0: (
-      <>
-        <Box
-          className="card-box w-full p-5"
-          sx={{
-            width: "100%!important",
-          }}
-        >
-          <DragUpload
-            fileSetting={{
-              type: uploadTypeName.PDF,
-              size: 20,
-              divHight: "h-[360px]",
-            }}
-            changeFile={(file, name, pageCount) => {
-              if (Array.isArray(file)) {
-                setPdfURL(file);
-                setPdfName(name);
-                setTotalPages(pageCount || 0);
-              }
-            }}
-            setProgressBar={setProgressBar}
-          />
-        </Box>
-      </>
+      <Box
+        className="card-box w-full p-5"
+        sx={{
+          width: "100%!important",
+        }}
+      >
+        <DragUpload />
+      </Box>
     ),
     1: (
-      <React.Fragment>
-        <FinishUpload
-          pdfName={pdfName}
-          setPdfName={setPdfName}
-          previousMenu={previousMenu}
-          cancelUpload={cancelUpload}
-          nextMenu={nextMenu}
-          progressBar={progressBar}
-        />
-      </React.Fragment>
+      <FinishUpload
+        pdfName={pdfName}
+        setPdfName={setPdfName}
+        previousMenu={previousMenu}
+        cancelUpload={cancelUpload}
+        nextMenu={nextMenu}
+        progressBar={progressBar}
+      />
     ),
     2: (
       <EditFile
+        key={window?.location?.pathname}
         pdfName={pdfName}
         setPdfName={setPdfName}
         cancelFile={cancelFile}

@@ -18,6 +18,8 @@ import {
   AttachFile,
   CheckBox,
   CheckBoxOutlineBlank,
+  CheckRounded,
+  Verified,
 } from "@mui/icons-material";
 import FilesAddModal from "./FilesAddModal";
 
@@ -28,19 +30,26 @@ import { documentsCtx } from "../context/documents";
 import { currDocumentCtx } from "../context/currDocument";
 import { filesCtx } from "../context/files";
 
+import { useNavigate } from "react-router-dom";
+
 const icon = <CheckBoxOutlineBlank fontSize="small" />;
 const checkedIcon = <CheckBox fontSize="small" />;
 
 const AttachedFiles = ({}) => {
   const theme = useTheme();
 
+  const navigate = useNavigate();
+
   const [createMode, setCreateMode] = React?.useState(false);
   const [documentCtx, setDocumentCtx] = React?.useState({});
 
   const selectedFiles = React?.useContext(filesCtx)?.selectedFiles;
+  const documentAnnexes = React?.useContext(filesCtx)?.documentAnnexes;
   const setSelectedFiles = React?.useContext(filesCtx)?.setSelectedFiles;
 
   const [isFilesAddOpen, setIsFilesAddOpen] = React?.useState(false);
+
+  const annexContext = sessionStorage?.getItem("annexes-data")?.length > 1;
 
   React?.useEffect(() => {
     if (window?.location?.pathname?.includes("new-document")) {
@@ -85,8 +94,11 @@ const AttachedFiles = ({}) => {
     setSelectedFiles([...selectedFiles, ..._files]);
   };
 
+  const filePath = React?.useContext(filesCtx)?.currentlyOpenedFile;
+  const setFilePath = React?.useContext(filesCtx)?.setCurrentlyOpenedFile;
+
   return (
-    <React.Fragment>
+    <div>
       <FilesAddModal
         open={isFilesAddOpen}
         setOpen={setIsFilesAddOpen}
@@ -159,39 +171,41 @@ const AttachedFiles = ({}) => {
             onChange={handleFilesChange}
           />
           {createMode ? (
-            <React.Fragment>
-              <Chip
-                component={"label"}
-                for={"files"}
-                variant={"outlined"}
-                size={"small"}
-                label={
-                  <Stack
-                    direction={"row"}
-                    sx={{
-                      alignItems: "center",
-                    }}
-                  >
-                    <Add
+            <div>
+              {!annexContext && (
+                <Chip
+                  component={"label"}
+                  for={"files"}
+                  variant={"outlined"}
+                  size={"small"}
+                  label={
+                    <Stack
+                      direction={"row"}
                       sx={{
-                        color: theme?.palette?.primary?.main,
-                        fontSize: "15px",
-                        mr: ".3rem",
+                        alignItems: "center",
                       }}
-                    />
-                    Ajouter
-                  </Stack>
-                }
-                sx={{
-                  cursor: "pointer",
-                  mb: "1rem",
-                }}
-                onClick={(event) => {
-                  // event?.preventDefault();
-                  // setIsFilesAddOpen(true);
-                }}
-              />
-              {selectedFiles?.map((target) => {
+                    >
+                      <Add
+                        sx={{
+                          color: theme?.palette?.primary?.main,
+                          fontSize: "15px",
+                          mr: ".3rem",
+                        }}
+                      />
+                      Ajouter
+                    </Stack>
+                  }
+                  sx={{
+                    cursor: "pointer",
+                    mb: "1rem",
+                  }}
+                  onClick={(event) => {
+                    // event?.preventDefault();
+                    // setIsFilesAddOpen(true);
+                  }}
+                />
+              )}
+              {selectedFiles?.map((target, index) => {
                 return (
                   <Chip
                     label={target?.name}
@@ -199,6 +213,19 @@ const AttachedFiles = ({}) => {
                       event?.preventDefault();
 
                       handleFileDelete(target);
+                    }}
+                    onClick={(event) => {
+                      // sessionStorage.setItem(
+                      //   "paraph-ctx",
+                      //   JSON.stringify({
+                      //     mode: "configuration",
+                      //     data: target,
+                      //   })
+                      // );
+                      // navigate(`/paraphs/${target?.id}`);
+                      // setTimeout(() => {
+                      //   window?.location?.reload();
+                      // }, 200);
                     }}
                     size={"small"}
                     sx={{
@@ -208,12 +235,12 @@ const AttachedFiles = ({}) => {
                   />
                 );
               })}
-            </React.Fragment>
+            </div>
           ) : (
             ""
           )}
 
-          {documentCtx?.data?.attachedFiles?.map((target, index) => {
+          {documentAnnexes?.map((target, index) => {
             return (
               <Chip
                 icon={
@@ -226,9 +253,48 @@ const AttachedFiles = ({}) => {
                   />
                 }
                 key={index}
-                href={target?.path}
+                onClick={(event) => {
+                  sessionStorage.setItem(
+                    "paraph-ctx",
+                    JSON.stringify({
+                      mode: "transitional",
+                      data: target,
+                    })
+                  );
+
+                  sessionStorage?.setItem(
+                    "documentToBeParaphedId",
+                    documentCtx?.data?.id
+                  );
+
+                  navigate(`/paraphs/${target?.id}`);
+
+                  setTimeout(() => {
+                    window?.location?.reload();
+                  }, 200);
+                }}
                 component={"a"}
                 size={"small"}
+                // label={
+                //   <Stack direction={"row"}>
+                //     <Typography
+                //       sx={{
+                //         maxWidth: "99%",
+                //         fontSize: "12px",
+                //         textOverflow: "ellipsis",
+                //         overflow: "hidden",
+                //       }}
+                //     >
+                //       {target?.name}
+                //     </Typography>
+                //     {/* <Verified
+                //       sx={{
+                //         color: theme?.palette?.primary?.main,
+                //         fontSize: "14px",
+                //       }}
+                //     /> */}
+                //   </Stack>
+                // }
                 label={target?.name}
                 target={"_blank"}
                 sx={{
@@ -243,7 +309,7 @@ const AttachedFiles = ({}) => {
           })}
         </Stack>
       </Box>
-    </React.Fragment>
+    </div>
   );
 };
 

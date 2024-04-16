@@ -65,15 +65,11 @@ const FilesAddModal = ({
     </Box>
   );
 
-  return open ? (
-    modalEl ? (
-      createPortal(modalContent, modalEl)
-    ) : (
-      modalContent
-    )
-  ) : (
-    <></>
-  );
+  return open
+    ? modalEl
+      ? createPortal(modalContent, modalEl)
+      : modalContent
+    : "";
 };
 
 export default FilesAddModal;

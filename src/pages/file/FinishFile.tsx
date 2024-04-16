@@ -17,6 +17,9 @@ import { fileAtom, messageAtom } from "../../jotai";
 import { Box, CircularProgress, useTheme } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { documentsCtx } from "../../context/documents";
+import { guardCtx } from "../../context/Guard";
+import { BASE_URL } from "../../constants/api";
+import { notificationCtx } from "../../context/notification";
 
 interface props {
   pdfName: string;
@@ -40,10 +43,14 @@ const FinishFile = ({ pdfName, setPdfName, finishPdf, totalPages }: props) => {
 
   const navigate = useNavigate();
 
+  const setLoadingMap = React?.useContext(guardCtx)?.setLoadingMap;
+
   const createCanvasItem = async (): void => {
     console.log("pdf url for upload data here", { pdfURL });
 
     setIsFetching(true);
+
+    setLoadingMap(true, "finish_file");
 
     const doc = (
       <Document>
@@ -101,7 +108,7 @@ const FinishFile = ({ pdfName, setPdfName, finishPdf, totalPages }: props) => {
       docBlobData
     );
 
-    await lookup(`${process.env.REACT_APP_API_HOST}/api/upload`, {
+    await lookup(`${BASE_URL}/api/upload`, {
       method: "POST",
       headers: _headers,
       body: form,
@@ -218,7 +225,7 @@ const FinishFile = ({ pdfName, setPdfName, finishPdf, totalPages }: props) => {
             );
 
             await lookup(
-              `${process.env.REACT_APP_API_HOST}/api/documents${
+              `${BASE_URL}/api/documents${
                 documentCtx?.mode === "edit" ? `/${documentCtx?.data?.id}` : ""
               }`,
               {
@@ -239,7 +246,7 @@ const FinishFile = ({ pdfName, setPdfName, finishPdf, totalPages }: props) => {
                       if (res?.data?.id) {
                         setIsFetching(false);
 
-                        alert(`Document signé avec succès`);
+                        showSuccess(`Document signé avec succès`);
 
                         navigate("/mydocuments");
 
@@ -251,7 +258,7 @@ const FinishFile = ({ pdfName, setPdfName, finishPdf, totalPages }: props) => {
                         sessionStorage?.removeItem("collabs");
                       } else {
                         setIsFetching(false);
-                        alert("Oups! Veuillez réessayer");
+                        showError("Oups! Veuillez réessayer");
                       }
                     }
                   })
@@ -263,7 +270,7 @@ const FinishFile = ({ pdfName, setPdfName, finishPdf, totalPages }: props) => {
 
                     setIsFetching(false);
 
-                    alert("Oups! Veuillez réessayer");
+                    showError("Oups! Veuillez réessayer");
                   })
               )
               .catch((error) => {
@@ -274,7 +281,7 @@ const FinishFile = ({ pdfName, setPdfName, finishPdf, totalPages }: props) => {
 
                 setIsFetching(false);
 
-                alert("Oups! Veuillez réessayer");
+                showError("Oups! Veuillez réessayer");
               });
           }
         })
@@ -284,17 +291,22 @@ const FinishFile = ({ pdfName, setPdfName, finishPdf, totalPages }: props) => {
 
         setIsFetching(false);
 
-        alert("Oups! Veuillez réessayer");
+        showError("Oups! Veuillez réessayer");
       });
+
+    setLoadingMap(false, "finish_file");
   };
 
-  useEffect(() => {
+  React.useEffect(() => {
     setMessage({
       open: true,
       icon: "check",
       content: MessageTexts.sign_success,
     });
   }, []);
+
+  const showError = React?.useContext(notificationCtx)?.showError;
+  const showSuccess = React?.useContext(notificationCtx)?.showSuccess;
 
   return (
     <Box
@@ -337,9 +349,9 @@ const FinishFile = ({ pdfName, setPdfName, finishPdf, totalPages }: props) => {
           className="btn-primary flex flex-auto items-center justify-center gap-3"
         >
           {!isFetching ? (
-            <React.Fragment>
+            <div>
               Envoyer <Upload size={20} />
-            </React.Fragment>
+            </div>
           ) : (
             <CircularProgress
               size="1rem"

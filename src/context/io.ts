@@ -1,7 +1,8 @@
 // context definition
 import { io } from 'socket.io-client';
+import { BASE_URL }  from "../constants/api"
 
-const socketCtx = io(process.env.REACT_APP_API_HOST, {
+const socketCtx = io(BASE_URL, {
     autoConnect: false
 });
 

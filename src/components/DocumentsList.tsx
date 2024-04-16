@@ -11,19 +11,29 @@ import {
   Avatar,
   Chip,
   useMediaQuery,
+  CircularProgress,
 } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import {
   AttachFile,
   ChevronRight,
+  Clear,
   Download,
-  Visibility,
+  Recycling,
+  Visibility,Archive
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import RejectionModal from "../components/RejectionModal";
 import { documentsCtx } from "../context/documents";
-import { Search } from "react-feather";
+import { Delete, Search } from "react-feather";
 import { appDataCtx } from "../context/appData";
+import NavigationLine from "./NavigationLine";
+import { filesCtx } from "../context/files";
+import { BASE_URL } from "../constants/api";
+import getHeaders from "../utils/getHeaders";
+import mergePdf from "../utils/pdfMerger";
+import { guardCtx } from "../context/Guard";
+import { notificationCtx } from "../context/notification";
 
 const DocumentsList = ({ rows, firstTitle = "Linzaka", secondTitle }) => {
   const theme = useTheme();
@@ -48,6 +58,9 @@ const DocumentsList = ({ rows, firstTitle = "Linzaka", secondTitle }) => {
     React?.useContext(documentsCtx)?.documents?.signed || [];
 
   const downloadLink = React?.useRef(null);
+  const fileContext = React?.useContext(filesCtx);
+
+  const setDocumentAnnexes = fileContext?.setDocumentAnnexes;
 
   const columns = [
     {
@@ -102,8 +115,13 @@ const DocumentsList = ({ rows, firstTitle = "Linzaka", secondTitle }) => {
       headerName: "Date de publication",
     },
     {
-      field: "expiryDate",
-      headerName: "Date d'expiration",
+      field: "archive",
+      headerName: "Archiver",
+      renderCell: ({ row }) => (
+        <IconButton onClick={handleDocRemove}>
+          <Archive color={"error"} />
+        </IconButton>
+      ),
     },
     {
       field: "department",
@@ -123,12 +141,6 @@ const DocumentsList = ({ rows, firstTitle = "Linzaka", secondTitle }) => {
             });
 
             if (row?.finalStatus === "complété") {
-              downloadLink.current.href = row?.file?.path;
-
-              console?.log("download link target ref", downloadLink);
-
-              // downloadLink?.current?.click();
-
               setRejectionModal({
                 data: {
                   ...row?.rejectedBy,
@@ -156,10 +168,20 @@ const DocumentsList = ({ rows, firstTitle = "Linzaka", secondTitle }) => {
                   "document-ctx",
                   JSON.stringify({ ...{ data: row }, mode: "edit" })
                 );
+
                 sessionStorage?.setItem(
                   "collabs",
                   JSON.stringify(row?.recipients)
                 );
+
+                sessionStorage?.setItem(
+                  "attachements",
+                  JSON.stringify(row?.attachedFiles)
+                );
+                setDocumentAnnexes(row?.attachedFiles);
+
+                sessionStorage?.removeItem("paraphedAnnex");
+                sessionStorage?.removeItem("paraph-ctx");
 
                 navigate(`/mydocuments/${row?.id}`);
               }
@@ -250,6 +272,12 @@ const DocumentsList = ({ rows, firstTitle = "Linzaka", secondTitle }) => {
     };
   });
 
+  const handleDocRemove = async (event) => {
+    event?.preventDefault();
+
+    setIsAskDeleteOpen(true);
+  };
+
   const [searchValue, setSearchValue] = React.useState("");
 
   const handleSearch = (event) => {
@@ -301,20 +329,218 @@ const DocumentsList = ({ rows, firstTitle = "Linzaka", secondTitle }) => {
 
   const injectData = React?.useContext(appDataCtx).injectData;
 
+  const handleZipDownload = async (event) => {
+    event?.preventDefault();
+
+    const files = [
+      rejectionModal?.data?.filePath,
+      ...(rejectionModal?.data?.attachedFiles || [])?.map(
+        (target) => target?.path
+      ),
+    ]?.map((file) => {
+      return "/uploads/" + file?.split("/")?.slice(-1)[0];
+    });
+
+    const _fileName = rejectionModal?.data?.title?.split(".")?.slice(0, 1)[0];
+
+    await lookup(`${BASE_URL}/api/compress`, {
+      headers: getHeaders({}),
+      body: JSON.stringify({
+        data: {
+          preferredName: _fileName,
+          filesToCompress: files,
+        },
+      }),
+      method: "POST",
+    })
+      .then((res) =>
+        res.blob().then((zipBuffer) => {
+          const compressedFile = new File([zipBuffer], _fileName + ".zip", {
+            type: "application/zip",
+          });
+          const dowloadUrl = URL.createObjectURL(compressedFile);
+
+          // window.open(dowloadUrl);
+
+          downloadRef?.current?.setAttribute("download", `${_fileName}.zip`);
+          downloadRef?.current?.setAttribute("href", dowloadUrl);
+          downloadRef?.current?.click();
+        })
+      )
+      .catch((error) => {
+        console.log("an error has occured when creating ", error);
+      });
+  };
+
+  const downloadRef = React?.useRef({});
+
+  const handleMerge = async (event) => {
+    event?.preventDefault();
+
+    let files = [
+      rejectionModal?.data?.filePath,
+      ...(rejectionModal?.data?.attachedFiles || [])?.map(
+        (target) => target?.path
+      ),
+    ];
+
+    const mergedFiles = [];
+
+    await Promise.all(
+      files?.map((filePath) => {
+        return (async () => {
+          let _file;
+
+          await lookup(`${filePath}`, {
+            headers: getHeaders({}),
+            method: "GET",
+          })
+            .then((res) =>
+              res.blob().then((data) => {
+                console.log("received data for file merge", data);
+
+                _file = new File(
+                  [data],
+                  filePath?.replaceAll("/", "_") + ".pdf"
+                );
+              })
+            )
+            .catch((error) => {
+              console.log(
+                "an error has occured when fetching download merge file",
+                error,
+                filePath
+              );
+            });
+
+          return _file;
+        })();
+      })
+    )
+      .then((computedFiles) => {
+        console.log("received computed files", computedFiles);
+
+        mergedFiles?.push(...computedFiles);
+      })
+      .catch((error) => {
+        console.log(
+          "an error has occured when fetching files data for download merge",
+          error
+        );
+      });
+
+    console.log("processed files for download merge", mergedFiles);
+
+    if (mergedFiles?.length > 0) {
+      let mergedFile;
+
+      await mergePdf({
+        files: mergedFiles,
+        parentDocument: "merged-doc.pdf",
+      })
+        .then((result) => {
+          mergedFile = result?.file;
+        })
+        .catch((error) => {
+          console.log(
+            "an error has occured when merging files for download",
+            error
+          );
+        });
+
+      const dowloadUrl = URL.createObjectURL(mergedFile);
+
+      window.open(dowloadUrl);
+    } else {
+      console.log("no merge download possible, files are empty");
+    }
+  };
+
+  const notifsContext = React?.useContext(notificationCtx);
+
+  const setLoadingMap = React?.useContext(guardCtx)?.setLoadingMap;
+  const showError = notifsContext?.showError;
+  const showSuccess = notifsContext?.showSuccess;
+  const showWarning = notifsContext?.showWarning;
+
+  const [deletionPurpose, setDeletionPurpose] = React?.useState("");
+  const [isAskDeleteOpen, setIsAskDeleteOpen] = React?.useState(false);
+
   return (
-    <React.Fragment>
-      <a
-        target={"_blank"}
-        ref={downloadLink}
-        onClick={() => {
-          // console.log("me download link, I have been clicked here");
+    <div>
+      <RejectionModal
+        open={isAskDeleteOpen}
+        setOpen={() => {
+          setIsAskDeleteOpen(false);
         }}
-        style={{
-          display: "none",
-        }}
+        childrenClassName={`w-[${screen900 ? 95 : 70}%]`}
       >
-        Download pdf file
-      </a>
+        <Stack className="card-box w-full p-6" sx={{}}>
+          <Typography
+            sx={{
+              fontSize: "14px",
+              textAlign: "center",
+              fontWeight: theme?.typography?.fontWeightBold,
+              color: theme?.palette?.error?.main,
+            }}
+          >
+            ARCHIVAGE DE DOSSIER
+          </Typography>
+          <Box
+            // className="text-field"
+            sx={{
+              py: ".3rem",
+              width: "100%",
+              my: "1rem",
+              backgroundColor: `${theme?.palette?.error?.main}10`,
+              borderColor: theme?.palette?.error?.main,
+              borderRadius: "1rem",
+              overflow: "hidden",
+              padding: "1rem"
+            }}
+          >
+            <textarea
+              rows={5}
+              type="text"
+              value={deletionPurpose}
+              onChange={(event) => {
+                event?.preventDefault();
+
+                setDeletionPurpose(event?.target?.value);
+              }}
+              placeholder={"Veuillez renseigner ici votre d'archivage"}
+              style={{
+                width: "100%",
+                outline: "none",
+                color: theme?.palette?.error?.main,
+                backgroundColor: "transparent",
+              }}
+            />
+          </Box>
+          <button
+            type="button"
+            className="btn-primary flex-auto"
+            onClick={async (event) => {
+              event?.preventDefault();
+
+              if (deletionPurpose?.length < 5) {
+                showWarning("Votre motif doit avoir au moins 5 caractères");
+              } else {
+                setLoadingMap(true, "remove_doc");
+
+                // deletion here
+
+                setLoadingMap(false, "remove_doc");
+              }
+            }}
+            style={{
+              backgroundColor: theme?.palette?.error?.main,
+            }}
+          >
+            Archiver
+          </button>
+        </Stack>
+      </RejectionModal>
       <RejectionModal
         open={rejectionModal?.visible}
         setOpen={() => {
@@ -336,14 +562,26 @@ const DocumentsList = ({ rows, firstTitle = "Linzaka", secondTitle }) => {
           >
             {rejectionModal?.rejected ? "DOCUMENT REJETE" : "DOCUMENT"}
           </Typography>
+          <a
+            ref={downloadRef}
+            href={"/"}
+            style={{
+              display: "none",
+            }}
+          ></a>
 
           <Stack
             direction={"column"}
             sx={{
               alignItems: "flex-start",
+              width: "100%",
             }}
           >
-            <React.Fragment>
+            <div
+              style={{
+                width: "100%",
+              }}
+            >
               <Stack
                 direction={"row"}
                 sx={{
@@ -408,7 +646,7 @@ const DocumentsList = ({ rows, firstTitle = "Linzaka", secondTitle }) => {
                   {rejectionModal?.data?.attachedFiles?.length > 0 ? (
                     ""
                   ) : (
-                    <Typography>{"Aucun fichier"}</Typography>
+                    <Typography>{"Aucune pièce jointe"}</Typography>
                   )}
                   <Stack
                     direction={"row"}
@@ -420,41 +658,45 @@ const DocumentsList = ({ rows, firstTitle = "Linzaka", secondTitle }) => {
                       flexWrap: "wrap",
                     }}
                   >
-                    {rejectionModal?.data?.attachedFiles?.map(
-                      (target, index) => {
-                        return (
-                          <Chip
-                            icon={
-                              <AttachFile
-                                sx={{
-                                  color: theme?.palette?.primary?.main,
-                                  fontSize: "15px",
-                                  transform: "rotate(45deg)",
-                                }}
-                              />
-                            }
-                            key={index}
-                            href={target?.path}
-                            component={"a"}
-                            size={"small"}
-                            label={target?.name}
-                            target={"_blank"}
-                            sx={{
-                              maxWidth: "90%",
-                              mr: ".2rem",
-                              mt: ".2rem",
-                              textDecoration: "none",
-                              cursor: "pointer",
-                            }}
-                          />
-                        );
-                      }
-                    )}
+                    {[
+                      {
+                        path: rejectionModal?.data?.filePath,
+                        name: rejectionModal?.data?.title,
+                      },
+                      ...(rejectionModal?.data?.attachedFiles || []),
+                    ]?.map((target, index) => {
+                      return (
+                        <Chip
+                          icon={
+                            <AttachFile
+                              sx={{
+                                color: theme?.palette?.primary?.main,
+                                fontSize: "15px",
+                                transform: "rotate(45deg)",
+                              }}
+                            />
+                          }
+                          key={index}
+                          href={target?.path}
+                          component={"a"}
+                          size={"small"}
+                          label={target?.name}
+                          target={"_blank"}
+                          sx={{
+                            maxWidth: "90%",
+                            mr: ".2rem",
+                            mt: ".2rem",
+                            textDecoration: "none",
+                            cursor: "pointer",
+                          }}
+                        />
+                      );
+                    })}
                   </Stack>
                 </Stack>
               </Stack>
               {rejectionModal?.rejected ? (
-                <React.Fragment>
+                <div>
                   <Typography
                     sx={{
                       color: theme?.palette?.grey?.[500],
@@ -465,22 +707,21 @@ const DocumentsList = ({ rows, firstTitle = "Linzaka", secondTitle }) => {
                     Motif
                   </Typography>
                   <Typography>{rejectionModal?.data?.reason}</Typography>
-                </React.Fragment>
+                </div>
               ) : (
                 ""
               )}
-            </React.Fragment>
+            </div>
           </Stack>
           <Stack
-            component={"a"}
-            href={rejectionModal?.data?.filePath || "///"}
-            target={"_blank"}
             direction={"row"}
             sx={{
-              alignItems: "center",
+              alignItems: "flex-start",
+              marginTop: ".5rem",
             }}
           >
             <button
+              onClick={handleZipDownload}
               type="button"
               className="btn-primary flex-auto"
               style={{
@@ -488,7 +729,21 @@ const DocumentsList = ({ rows, firstTitle = "Linzaka", secondTitle }) => {
                 marginTop: "1rem",
               }}
             >
-              Telecharger {<Download />}
+              Compresser {<Download />}
+            </button>
+            <button
+              onClick={handleMerge}
+              type="button"
+              className="btn-primary flex-auto"
+              style={{
+                width: "max-content",
+                marginTop: "1rem",
+                marginLeft: ".5rem",
+                backgroundColor: `${theme?.palette?.primary?.main}10`,
+                color: `${theme?.palette?.primary?.main}`,
+              }}
+            >
+              Merger {<Recycling />}
             </button>
           </Stack>
         </Stack>
@@ -509,45 +764,10 @@ const DocumentsList = ({ rows, firstTitle = "Linzaka", secondTitle }) => {
             width: "100%",
           }}
         >
-          <Stack
-            direction={"row"}
-            sx={{
-              alignItems: "center",
-              justifyContent: "flex-start",
-              my: "1rem",
-            }}
-          >
-            <Typography
-              sx={{
-                color: theme?.palette?.grey[700],
-                fontWeight: theme?.typography?.fontWeightBold,
-                fontSize: "16px",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              {firstTitle}
-            </Typography>
-            <ChevronRight
-              sx={{
-                fontSize: "25px",
-                color: theme?.palette?.grey[500],
-              }}
-            />
-            <Typography
-              sx={{
-                color: theme?.palette?.grey[700],
-                fontWeight: theme?.typography?.fontWeightRegular,
-                fontSize: "16px",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              {secondTitle}
-            </Typography>
-          </Stack>
+          <NavigationLine
+            firstTitle={"Mes documents"}
+            secondTitle={secondTitle}
+          />
           <Box
             className="text-field"
             sx={{
@@ -570,8 +790,11 @@ const DocumentsList = ({ rows, firstTitle = "Linzaka", secondTitle }) => {
             "& .grid--header": {
               "& *": { fontWeight: theme?.typography?.fontWeightBold },
             },
-            wisth: "100%",
+            width: "100%",
             overflowX: "auto",
+            maxHeight: "75vh",
+            overflowY: "auto",
+            borderRadius: "15px",
           }}
         >
           <DataGrid
@@ -580,20 +803,21 @@ const DocumentsList = ({ rows, firstTitle = "Linzaka", secondTitle }) => {
             initialState={{
               pagination: {
                 paginationModel: {
-                  pageSize: 5,
+                  pageSize: 10,
                 },
               },
             }}
-            pageSizeOptions={[5]}
+            pageSizeOptions={[10, 25, 50]}
             disableRowSelectionOnClick
             sx={{
               bgcolor: theme?.palette?.common?.white,
-              borderRadius: "10px",
+              borderRadius: "15px",
+              overflow: "hidden",
             }}
           />
         </Box>
       </Stack>
-    </React.Fragment>
+    </div>
   );
 };
 

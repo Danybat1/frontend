@@ -1,7 +1,7 @@
 // component defintion
 
 import * as React from "react";
-import { Stack, useTheme } from "@mui/material";
+import { Stack, useTheme, Grid, Skeleton } from "@mui/material";
 import { Add } from "@mui/icons-material";
 import { useNavigate, useParams } from "react-router-dom";
 import Layout from "./Layout";
@@ -19,8 +19,9 @@ import FinishFile from "../pages/file/FinishFile";
 import { documentsCtx } from "../context/documents";
 
 import { fabric } from "fabric";
-
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
+import { guardCtx } from "../context/Guard";
+import { filesCtx } from "../context/files";
+import SkeletonContainer from "./SkeletonContainer";
 
 interface props {
   fileSetting: {
@@ -38,6 +39,8 @@ interface props {
 
 const DocumentView = ({}) => {
   const theme = useTheme();
+
+  const fileContext = React?.useContext(filesCtx);
 
   const [pdfURL, setPdfURL] =
     useAtom<PrimitiveAtom<pdfFileType[] | null>>(fileAtom);
@@ -72,7 +75,9 @@ const DocumentView = ({}) => {
   const [uploadError, setUploadError] = React.useState<"type" | "size" | null>(
     null
   ); // 錯誤提醒，圖片類型和不超過檔案大小
-  const [progressBar, setProgressBar] = React.useState<number>(0);
+
+  const progressBar = fileContext?.progressBar;
+  const setProgressBar = fileContext?.setprogressBar;
 
   // pdf canvas
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
@@ -80,7 +85,9 @@ const DocumentView = ({}) => {
   const [canvas, setCanvas] = React.useState<HTMLCanvasElement | null>(null);
 
   const changeFile = (file, name, pageCount) => {
-    console.log("final file to be considered", { file });
+    console.log("final file to be considered here", { file });
+
+    setLoadingMap(true, "change_file");
 
     if (Array.isArray(file) && file?.length > 0) {
       setPdfURL(file);
@@ -91,16 +98,22 @@ const DocumentView = ({}) => {
     } else {
       console.log("tried to load errored data", { file });
     }
+
+    setLoadingMap(false, "change_file");
   };
 
   const [loadedFile, setLoadedFile] = React?.useState(false);
 
+  const setLoadingMap = React?.useContext(guardCtx)?.setLoadingMap;
+
   React?.useEffect(() => {
     if (canvas === null) return;
 
+    const filePath = JSON.parse(sessionStorage?.getItem("document-ctx"))?.data
+      ?.file?.path;
+
     (async () => {
-      const filePath = JSON.parse(sessionStorage?.getItem("document-ctx"))?.data
-        ?.file?.path;
+      setLoadingMap(true, "document_view");
 
       console.log("is fetching document file data at ", filePath);
 
@@ -109,9 +122,15 @@ const DocumentView = ({}) => {
           data
             .blob()
             .then((file) => {
+              setLoadingMap(true, "document_look");
+
               file = new File([file], pdfName);
 
-              if (!file) return;
+              if (!file) {
+                setLoadingMap(true, "document_look");
+
+                return;
+              }
 
               console.log("successfully loaded file", file);
 
@@ -147,9 +166,11 @@ const DocumentView = ({}) => {
               if (judgeFileType) {
                 // 處理 PDF
                 fileReader.onload = function (event) {
+                  setLoadingMap(true, "document_onload");
+
                   const { result } = event.target as FileReader;
 
-                  console.log("document loading info here", { result });
+                  // console.log("document loading info here", { result });
 
                   if (
                     typeof result !== "string" &&
@@ -167,15 +188,18 @@ const DocumentView = ({}) => {
                         // Fetch the first page
                         const imageDate: pdfFileType[] = [];
 
-                        console.log("start processing file", {
-                          pages: pdf?.numPages,
-                        });
+                        // console.log("start processing file", {
+                        //   pages: pdf?.numPages,
+                        // });
+
+                        setLoadingMap(true, "document_loading_task");
 
                         await Promise.allSettled(
                           new Array(pdf?.numPages + 1)
                             ?.fill(null)
                             ?.map((_page, index) => {
                               return pdf.getPage(index).then(async (page) => {
+                                setLoadingMap(true, "document_get_page");
                                 const viewport = await page.getViewport({
                                   scale: 1,
                                 });
@@ -195,12 +219,14 @@ const DocumentView = ({}) => {
                                 if (!context) {
                                   console.log("will stop processing file", {});
 
+                                  setLoadingMap(false, "document_get_page");
+
                                   return;
                                 } else {
-                                  console.log(
-                                    "going forward in processing",
-                                    {}
-                                  );
+                                  // console.log(
+                                  //   "going forward in processing",
+                                  //   {}
+                                  // );
                                 }
 
                                 const renderContext = {
@@ -212,18 +238,20 @@ const DocumentView = ({}) => {
                                   renderContext
                                 );
 
-                                console.log(
-                                  "pages iteration for rendering",
-                                  page
-                                );
+                                // console.log(
+                                //   "pages iteration for rendering",
+                                //   page
+                                // );
 
                                 await renderTask.promise.then(() => {
                                   // 輸出圖片，使用指定位置不會導致頁面順序不對
 
-                                  console.log(
-                                    "filling the rendering document views",
-                                    imageDate
-                                  );
+                                  // console.log(
+                                  //   "filling the rendering document views",
+                                  //   imageDate
+                                  // );
+
+                                  setLoadingMap(true, "document_render_task");
 
                                   imageDate[page._pageIndex] = {
                                     orientation:
@@ -238,7 +266,11 @@ const DocumentView = ({}) => {
                                   setProgressBar?.(
                                     (imageDate.length / pdf.numPages) * 100
                                   );
+
+                                  setLoadingMap(false, "document_render_task");
                                 });
+
+                                setLoadingMap(false, "document_get_page");
                               });
                             })
                         )
@@ -253,17 +285,21 @@ const DocumentView = ({}) => {
                               error
                             );
                           });
+
+                        setLoadingMap(false, "document_loading_task");
                       },
                       (reason) => {
                         // PDF loading error
-                        if (process.env.NODE_ENV === "development") {
-                          console.error(reason);
-                        }
+                        // if (process.env.NODE_ENV === "development") {
+                        //   console.error(reason);
+                        // }
                       }
                     );
                   } else {
                     console.log("is failing basicall conditions for rendering");
                   }
+
+                  setLoadingMap(false, "document_onload");
                 };
 
                 console.log(
@@ -275,8 +311,13 @@ const DocumentView = ({}) => {
               } else {
                 // 處理 Img
                 fileReader.onload = () => {
+                  setLoadingMap(true, "document_fle_reader");
+
                   changeFile(fileReader.result, name);
+
                   setDragActive(false);
+
+                  setLoadingMap(false, "document_fle_reader");
                 };
 
                 console.log(
@@ -286,6 +327,8 @@ const DocumentView = ({}) => {
 
                 fileReader.readAsDataURL(file);
               }
+
+              setLoadingMap(false, "document_look");
             })
             .catch((error) => {
               console.log(
@@ -300,6 +343,8 @@ const DocumentView = ({}) => {
             error
           );
         });
+
+      setLoadingMap(false, "document_view");
     })();
   }, [canvas]);
 
@@ -347,7 +392,7 @@ const DocumentView = ({}) => {
   return (
     <Layout>
       <canvas className="hidden" ref={canvasRef} width={100} height={100} />
-      {loadedFile && fileElement[stepMenu]}
+      {loadedFile ? fileElement[stepMenu] : <SkeletonContainer />}
     </Layout>
   );
 };

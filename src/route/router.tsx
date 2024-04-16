@@ -1,3 +1,5 @@
+// application routing logic definition
+
 import { ReactComponent as FileIcon } from "../assets/svg/file.svg";
 import { ReactComponent as SettingIcon } from "../assets/svg/setting.svg";
 import { ReactComponent as WritingIcon } from "../assets/svg/writing.svg";
@@ -13,178 +15,108 @@ import LoginForm from "../pages/login";
 import DocumentView from "../components/DocumentView";
 import ActivityHistory from "../components/ActivityHistory";
 import EnvelopeDocs from "../components/EncelopeDocs";
+import AccessManagement from "../pages/access-management";
+import InvitedUser from "../components/InvitedUser";
+import ParaphView from "../pages/paraph";
+import ForgotPassword from "../components/ForgotPassword";
+import ResetPassword from "../components/ResetPassword";
 
 const routes: PageListType[] = [
   {
-    name: (
-      <>
-        <span className="i-icon">
-          <FileIcon />
-        </span>
-        Dashboard
-      </>
-    ),
+    path: "/auth/reset-password",
+    element: <ResetPassword />,
+    classTag: "svg-fill",
+  },
+  {
+    path: "/auth/forgot-password",
+    element: <ForgotPassword />,
+    classTag: "svg-fill",
+  },
+  {
     path: "/dashboard",
     element: <Dashboard />,
     classTag: "svg-fill",
   },
   {
-    name: (
-      <>
-        <span className="i-icon">
-          <FileIcon />
-        </span>
-        Dashboard
-      </>
-    ),
     path: "/",
     element: <Dashboard />,
     classTag: "svg-fill",
   },
   {
-    name: (
-      <>
-        <span className="i-icon">
-          <FileIcon />
-        </span>
-        Dashboard
-      </>
-    ),
     path: "/mydocuments/:ref",
     element: <DocumentView />,
     classTag: "svg-fill",
   },
 
   {
-    name: (
-      <>
-        <span className="i-icon">
-          <FileIcon />
-        </span>
-        Dashboard
-      </>
-    ),
     path: "/envelope/:ref/documents",
     element: <EnvelopeDocs />,
     classTag: "svg-fill",
   },
   {
-    name: (
-      <>
-        <span className="i-icon">
-          <FileIcon />
-        </span>
-        Document
-      </>
-    ),
     path: "/mydocuments/new-document",
     element: <File />,
     classTag: "svg-fill",
   },
   {
-    name: (
-      <>
-        <span className="i-icon">
-          <WritingIcon />
-        </span>
-        Signature
-      </>
-    ),
     path: "/mydocuments/sign",
     element: <Sign />,
     classTag: "svg-stroke",
   },
   {
-    name: (
-      <>
-        <span className="i-icon">
-          <SettingIcon />
-        </span>
-        Paramètres
-      </>
-    ),
     path: "/requests/all",
     element: <AllDocuments />,
     classTag: "svg-fill",
   },
   {
-    name: (
-      <>
-        <span className="i-icon">
-          <SettingIcon />
-        </span>
-        Paramètres
-      </>
-    ),
     path: "/mydocuments",
     element: <MyDocuments />,
     classTag: "svg-fill",
   },
   {
-    name: (
-      <>
-        <span className="i-icon">
-          <SettingIcon />
-        </span>
-        Paramètres
-      </>
-    ),
     path: "/mydocuments/all",
     element: <MyDocuments />,
     classTag: "svg-fill",
   },
   {
-    name: (
-      <>
-        <span className="i-icon">
-          <SettingIcon />
-        </span>
-        Paramètres
-      </>
-    ),
     path: "/mydocuments/history",
     element: <ActivityHistory />,
     classTag: "svg-fill",
   },
   {
-    name: (
-      <>
-        <span className="i-icon">
-          <SettingIcon />
-        </span>
-        Paramètres
-      </>
-    ),
     path: "/requests/pending",
     element: <PendingDocuments />,
     classTag: "svg-fill",
   },
   {
-    name: (
-      <>
-        <span className="i-icon">
-          <SettingIcon />
-        </span>
-        Paramètres
-      </>
-    ),
     path: "/requests/validated",
     element: <ValidatedDocs />,
     classTag: "svg-fill",
   },
   {
-    name: (
-      <>
-        <span className="i-icon">
-          <SettingIcon />
-        </span>
-        Login
-      </>
-    ),
     path: "/login",
     element: <LoginForm />,
     classTag: "svg-fill",
   },
+  {
+    path: "/access-management",
+    element: <AccessManagement />,
+    classTag: "svg-fill",
+  },
+  {
+    path: "/paraphs/:id",
+    element: <ParaphView />,
+    classTag: "svg-fill",
+  },
+  // {
+  //   path: "/mydocuments/new-document/annexes",
+  //   element: (
+  //     <div>
+  //       <File />
+  //     </div>
+  //   ),
+  //   classTag: "svg-fill",
+  // },
 ];
 
 export default routes;

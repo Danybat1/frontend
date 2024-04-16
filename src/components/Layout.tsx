@@ -27,6 +27,7 @@ import {
   Close,
   AddAlarm,
   NotificationAdd,
+  People,
 } from "@mui/icons-material";
 import { ChevronUp } from "react-feather";
 import { useNavigate } from "react-router-dom";
@@ -90,6 +91,16 @@ const Layout = ({ children }: Props) => {
     },
   ];
 
+  if (sessionStorage?.getItem("role") === "Admin") {
+    menuMaterials?.push({
+      title: "Utilisateurs",
+      key: "/access-management",
+      link: "/access-management",
+      icon: (props) => <People {...props} />,
+      children: [{ title: "Gestion accès", link: "/access-management" }],
+    });
+  }
+
   const screen900 = useMediaQuery(theme?.breakpoints?.down(900));
 
   const [drawerOpened, setDrawerOpened] = React?.useState(false);
@@ -109,13 +120,18 @@ const Layout = ({ children }: Props) => {
   };
 
   return (
-    <React.Fragment>
+    <div>
       {!window?.location?.pathname?.includes("new-document") && (
         <SpeedDial
           ariaLabel="create document"
           onClick={(event) => {
             event?.preventDefault();
-            navigate("/mydocuments/new-document",);
+
+            if (window?.location?.pathname?.includes("/access-management")) {
+              navigate("/access-management/user/new");
+            } else {
+              navigate("/mydocuments/new-document");
+            }
           }}
           sx={{
             position: "fixed",
@@ -375,17 +391,13 @@ const Layout = ({ children }: Props) => {
               </Stack>
             ) : (
               <Box
-                sx={{
-                  width: "70px",
-                }}
+                sx={
+                  {
+                    // width: "70px",
+                  }
+                }
               >
-                <img
-                  alt={"linzaka logo"}
-                  src={"/images/favicon.png"}
-                  sx={{
-                    width: "100%",
-                  }}
-                />
+                <img alt={"linzaka logo"} src={"/images/logo.png"} />
               </Box>
             )}
             {!screen900 ? (
@@ -451,13 +463,12 @@ const Layout = ({ children }: Props) => {
             <Avatar
               onClick={(event) => {
                 event?.preventDefault();
-
-                setUserDrawerOpened(!userDrawerOpened);
+                setUserDrawerOpened(true);
               }}
+              src={sessionStorage?.getItem("profile")}
               sx={{
                 width: 40,
                 height: 40,
-                bgcolor: "#227378",
                 cursor: "pointer",
               }}
             >
@@ -661,7 +672,7 @@ const Layout = ({ children }: Props) => {
           </Stack>
         </Stack>
       </Stack>
-    </React.Fragment>
+    </div>
   );
 };
 

@@ -7,29 +7,48 @@ import App from "../App";
 import LoginForm from "../pages/login";
 import { socketCtx } from "./io";
 
+import { NODE_ENV } from "../constants/env";
+
 const guardCtx = React?.createContext({});
 
 const GuardContext = ({ children }) => {
   const [isUserAuthenticanted, setIsUserAuthenticated] = React?.useState(
     window?.sessionStorage?.getItem("token")?.length > 15
   );
-  const [documents, setDocuments] = React?.useState([]);
-  const [logging, setLogging] = React?.useState(false);
+
+  const [loadingMap, _setLoadingMap] = React?.useState(false);
+
+  const setLoadingMap = (loadingValue, key) => {
+    if (![loadingValue, key]?.includes(undefined)) {
+      const newVal = {
+        ...(JSON.parse(sessionStorage.getItem("loadingMap")) || {}),
+        [key]: loadingValue,
+      };
+
+      if (Object.keys(newVal)?.some((key) => newVal[key] === true)) {
+        _setLoadingMap(true);
+      } else {
+        _setLoadingMap(false);
+      }
+
+      sessionStorage?.setItem("loadingMap", JSON.stringify(newVal));
+    }
+  };
 
   const navigate = useNavigate();
 
   const [isFetchCustomized, setIsFetchCustomized] = React?.useState(false);
 
-  const [globalLoading, setGlobalLoading] = React?.useState(false);
-
   React.useEffect(() => {
+    sessionStorage?.setItem("loadingMap", JSON.stringify({}));
+
     window.lookup = async (url, options) => {
-      setGlobalLoading(true);
+      setLoadingMap(true, "_guards");
 
       return fetch(url, options)
         .then((res) => {
           setTimeout(() => {
-            setGlobalLoading(false);
+            setLoadingMap(false, "_guards");
           }, 100);
 
           console.log("gotten res from lookup", res);
@@ -39,9 +58,7 @@ const GuardContext = ({ children }) => {
           });
         })
         .catch((error) => {
-          setTimeout(() => {
-            setGlobalLoading(false);
-          }, 100);
+          setLoadingMap(false, "_guards");
 
           console.log("gotten error from lookup", error);
 
@@ -68,7 +85,11 @@ const GuardContext = ({ children }) => {
 
       console.log("should have been connected");
     } else {
-      navigate("/login", { replace: true });
+      if (!window?.location?.pathname?.includes("-password")) {
+        navigate("/login", { replace: true });
+      } else {
+        console.log("prevented moving to login as we are trating passwords");
+      }
 
       try {
         console.log(
@@ -84,8 +105,8 @@ const GuardContext = ({ children }) => {
   }, []);
 
   return (
-    <React.Fragment>
-      {globalLoading ? (
+    <div>
+      {loadingMap ? (
         <Stack
           sx={{
             width: "100vw",
@@ -113,12 +134,16 @@ const GuardContext = ({ children }) => {
       )}
       {isFetchCustomized && (
         <guardCtx.Provider
-          value={{ isUserAuthenticanted, setIsUserAuthenticated }}
+          value={{
+            isUserAuthenticanted,
+            setIsUserAuthenticated,
+            setLoadingMap,
+          }}
         >
           {children}
         </guardCtx.Provider>
       )}
-    </React.Fragment>
+    </div>
   );
 };
 

@@ -4,20 +4,33 @@ import * as React from "react";
 import {
   Avatar,
   CircularProgress,
+  IconButton,
+  InputAdornment,
   Stack,
   TextField,
   Typography,
+  useMediaQuery,
   useTheme,
 } from "@mui/material";
 import {} from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { LogOut, Upload } from "react-feather";
 import getHeaders from "../utils/getHeaders";
+import { guardCtx } from "../context/Guard";
+import { BASE_URL } from "../constants/api";
+import { notificationCtx } from "../context/notification";
+import { GridVisibilityOffIcon } from "@mui/x-data-grid";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 
 const User = ({}) => {
   const theme = useTheme();
 
   const navigate = useNavigate();
+  const showError = React?.useContext(notificationCtx)?.showError;
+
+  const setLoadingMap = React?.useContext(guardCtx)?.setLoadingMap;
+
+  const screen900 = useMediaQuery(theme?.breakpoints?.down(900));
 
   const handleLogout = (event) => {
     event?.preventDefault();
@@ -36,60 +49,85 @@ const User = ({}) => {
   const handlePwdChange = async (event) => {
     event?.preventDefault();
 
-    setIsloading(false);
+    if (window.confirm("Voulez-vous procéder au changement ?")) {
+      setIsloading(true);
 
-    const submitObj = {};
+      setLoadingMap(true, "_user");
 
-    const formData = new FormData(event?.currentTarget);
+      const submitObj = {};
 
-    for (let [key, value] of formData.entries()) {
-      submitObj[key] = value;
-    }
+      const formData = new FormData(event?.currentTarget);
 
-    const errorMaper = (errorText) => {
-      const _mapping = {
-        [errorText?.includes("password is invalid")]: "Mot de passe incorrect",
-        [errorText?.includes("not match")]:
-          "Les mots de passe ne correspondent",
-        [errorText?.includes("least 6 characters")]:
-          "Veuillez entrer au moins 6 caractères pour le mot de passe",
+      for (let [key, value] of formData.entries()) {
+        submitObj[key] = value;
+      }
+
+      const errorMaper = (errorText) => {
+        const _mapping = {
+          [errorText?.includes("password is invalid")]:
+            "Mot de passe incorrect",
+          [errorText?.includes("not match")]:
+            "Les mots de passe ne correspondent",
+          [errorText?.includes("least 6 characters")]:
+            "Veuillez entrer au moins 6 caractères pour le mot de passe",
+        };
+
+        return _mapping[true];
       };
 
-      return _mapping[true];
-    };
+      await lookup(`${BASE_URL}/api/auth/change-password`, {
+        method: "POST",
+        headers: getHeaders({}),
+        body: JSON.stringify(submitObj),
+      })
+        .then((res) =>
+          res
+            .json()
+            .then((data) => {
+              console.log("response data after pwd update", data);
 
-    await lookup(`${process.env.REACT_APP_API_HOST}/api/auth/change-password`, {
-      method: "POST",
-      headers: getHeaders({}),
-      body: JSON.stringify(submitObj),
-    })
-      .then((res) =>
-        res
-          .json()
-          .then((data) => {
-            console.log("response data after pwd update", data);
+              if (data?.jwt) {
+                navigate("/login", {
+                  replace: true,
+                });
+              } else {
+                showError(errorMaper(data?.error?.message));
+              }
 
-            if (data?.jwt) {
-              navigate("/login", {
-                replace: true,
-              });
-            } else {
-              alert(errorMaper(data?.error?.message));
-            }
+              setIsloading(false);
+            })
+            .catch((error) => {
+              console.error("an error has occured when updating pwd", error);
 
-            setIsloading(false);
-          })
-          .catch((error) => {
-            console.error("an error has occured when updating pwd", error);
+              setIsloading(false);
+            })
+        )
+        .catch((error) => {
+          console.error("an error has occured when updating pwd", error);
 
-            setIsloading(false);
-          })
-      )
-      .catch((error) => {
-        console.error("an error has occured when updating pwd", error);
+          setIsloading(false);
+        });
 
-        setIsloading(false);
-      });
+      setLoadingMap(false, "_user");
+    }
+  };
+
+  const [showPassword, setShowPassword] = React.useState(false);
+
+  const handleShowPassword = () => {
+    setShowPassword((show) => !show);
+  };
+
+  const [showConfirm, setShowConfirm] = React.useState(false);
+
+  const handleShowConfirm = () => {
+    setShowConfirm((show) => !show);
+  };
+
+  const [showOld, setShowOld] = React.useState(false);
+
+  const handleShowOld = () => {
+    setShowOld((show) => !show);
   };
 
   return (
@@ -100,9 +138,9 @@ const User = ({}) => {
         minHeight: "100vh",
         bgcolor: theme?.palette?.common?.white,
         overflowY: "auto",
-        width: "20vw",
+        width: screen900 ? "75vw" : "25vw",
         minWidth: "200px",
-        maxWidth: "300px",
+        maxWidth: "320px",
       }}
     >
       <Stack
@@ -208,7 +246,20 @@ const User = ({}) => {
               fullWidth
               name="currentPassword"
               label="Ancien mot de passe"
-              type="password"
+              type={showOld ? "text" : "password"}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton onClick={handleShowOld} edge="end">
+                      {showOld ? (
+                        <GridVisibilityOffIcon />
+                      ) : (
+                        <VisibilityIcon />
+                      )}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
               id="password"
               autoComplete="current-password"
               size={"small"}
@@ -223,7 +274,20 @@ const User = ({}) => {
               fullWidth
               name="password"
               label="Nouveau mot de passe"
-              type="password"
+              type={showPassword ? "text" : "password"}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton onClick={handleShowPassword} edge="end">
+                      {showPassword ? (
+                        <GridVisibilityOffIcon />
+                      ) : (
+                        <VisibilityIcon />
+                      )}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
               id="password"
               size={"small"}
               sx={{
@@ -237,7 +301,20 @@ const User = ({}) => {
               fullWidth
               name="passwordConfirmation"
               label="Confirmer le mot de passe"
-              type="password"
+              type={showConfirm ? "text" : "password"}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton onClick={handleShowConfirm} edge="end">
+                      {showConfirm ? (
+                        <GridVisibilityOffIcon />
+                      ) : (
+                        <VisibilityIcon />
+                      )}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
               id="password"
               size={"small"}
               sx={{

@@ -1,4 +1,8 @@
 /* eslint-disable no-return-assign */
+
+// component definition
+import * as React from "react";
+
 import { useEffect, useRef, useState } from "react";
 
 import { PrimitiveAtom, useAtom } from "jotai";
@@ -6,8 +10,11 @@ import { pdfjs } from "react-pdf";
 
 import { RWDSize } from "../../../constants/EnumType";
 import { fileAtom } from "../../../jotai";
+import { useParams } from "react-router-dom";
+import { Typography } from "@mui/material";
+import { guardCtx } from "../../../context/Guard";
 
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
+pdfjs.GlobalWorkerOptions.workerSrc = `${window.location.host}/libs/pdfjs/worker.txt`;
 
 interface props {
   totalPages: number;
@@ -29,6 +36,8 @@ const FileList = ({
   const pageItemRef = useRef<(HTMLCanvasElement | null)[]>([]);
   const [resizeSize, setResizeSize] = useState<boolean>(false);
 
+  const params = useParams();
+
   const moveCanvasScroll = (e: React.MouseEvent<HTMLDivElement>) => {
     const clickIndex = Number(e.currentTarget.dataset.count) - 1;
     const canvasListRefCurrent = canvasListRef.current;
@@ -41,11 +50,23 @@ const FileList = ({
     setFocusCanvasIdx(clickIndex);
   };
 
+  const setLoadingMap = React?.useContext(guardCtx)?.setLoadingMap;
+
   const handlePageItem = () => {
     const canvasDiv = pageListRef.current;
+
+    console.log("data to be injected into side canvas list", {
+      fileUrl,
+      canvasDiv,
+    });
+
     if (!canvasDiv) return;
 
+    setLoadingMap(true, "canvas_write_image");
+
     for (let i = 0; i < totalPages; i++) {
+      console.log("current file list canvas url", { i });
+
       if (fileUrl[i]) {
         const canvasChild = pageItemRef.current[i];
         if (!canvasChild) return;
@@ -68,11 +89,14 @@ const FileList = ({
         };
       }
     }
+
+    setLoadingMap(false, "canvas_write_image");
   };
 
   useEffect(() => {
     handlePageItem();
-  }, [pageListRef, resizeSize]);
+    // }, [pageListRef, resizeSize]);
+  }, [resizeSize, pageListRef]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -84,7 +108,8 @@ const FileList = ({
     return () => {
       window.removeEventListener("resize", handleResize);
     };
-  }, []);
+    // }, [params?.id]);
+  }, [pdfURL]);
 
   return (
     <div

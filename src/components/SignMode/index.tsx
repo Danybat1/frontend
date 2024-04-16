@@ -29,7 +29,7 @@ const SignMode = ({ onlySendBtn = false, clickStartSignBtn }: props) => {
   };
 
   const handleOnlyBtnElement: JSX.Element = onlySendBtn ? (
-    <></>
+    ""
   ) : (
     <button
       type="button"
@@ -55,7 +55,7 @@ const SignMode = ({ onlySendBtn = false, clickStartSignBtn }: props) => {
   };
 
   return (
-    <>
+    <div>
       {ActiveMenu === 0 ? (
         <Signatures ActiveMenu={ActiveMenu} setActiveMenu={setActiveMenu} />
       ) : ActiveMenu === 1 ? (
@@ -75,7 +75,7 @@ const SignMode = ({ onlySendBtn = false, clickStartSignBtn }: props) => {
           handleSaveBtnMessage={handleSaveBtnMessage}
         />
       )}
-    </>
+    </div>
   );
 };
 

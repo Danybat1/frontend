@@ -14,6 +14,8 @@ import { ChevronRight, Delete, Visibility } from "@mui/icons-material";
 import MenuHorizontal from "./SignMode/Writing/MenuHorizontal";
 import { signaturesCtx } from "../context/signatures";
 import { useNavigate } from "react-router-dom";
+import { guardCtx } from "../context/Guard";
+import { BASE_URL } from "../constants/api";
 
 const Signatures = ({ ActiveMenu, setActiveMenu }) => {
   const theme = useTheme();
@@ -71,6 +73,8 @@ const Signatures = ({ ActiveMenu, setActiveMenu }) => {
     };
   });
 
+  const setLoadingMap = React?.useContext(guardCtx)?.setLoadingMap;
+
   const handleDelete = async (signId) => {
     const _headers = new Headers();
 
@@ -83,13 +87,12 @@ const Signatures = ({ ActiveMenu, setActiveMenu }) => {
     );
 
     if (window.confirm("La signature sera supprimée")) {
-      await lookup(
-        `${process.env.REACT_APP_API_HOST}/api/signatures/${signId}`,
-        {
-          method: "DELETE",
-          headers: _headers,
-        }
-      )
+      setLoadingMap(true, "_signatures");
+
+      await lookup(`${BASE_URL}/api/signatures/${signId}`, {
+        method: "DELETE",
+        headers: _headers,
+      })
         .then((res) =>
           res
             .json()
@@ -114,6 +117,8 @@ const Signatures = ({ ActiveMenu, setActiveMenu }) => {
         .catch((error) => {
           console.log("an error has occured when deleting a signature", error);
         });
+
+      setLoadingMap(false, "_signatures");
     }
   };
 

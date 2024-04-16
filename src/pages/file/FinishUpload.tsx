@@ -23,7 +23,12 @@ import { Check } from "react-feather";
 import { ReactComponent as PdfIcon } from "../../assets/svg/pdf.svg";
 import InputTextField from "../../components/InputTextField";
 import InviteesModal from "../../components/InviteesModal";
+import { BASE_URL } from "../../constants/api";
+import { currDocumentCtx } from "../../context/currDocument";
 import { documentsCtx } from "../../context/documents";
+import { filesCtx } from "../../context/files";
+import { guardCtx } from "../../context/Guard";
+import { notificationCtx } from "../../context/notification";
 import { usersCtx } from "../../context/users";
 
 interface props {
@@ -39,16 +44,22 @@ const icon = <CheckBoxOutlineBlank fontSize="small" />;
 const checkedIcon = <CheckBox fontSize="small" />;
 
 const FinishUpload = ({
-  pdfName,
-  setPdfName,
   previousMenu,
   cancelUpload,
   nextMenu,
-  progressBar,
+  renderingKey,
 }: props) => {
   const [inviteBox, setInviteBox] = React?.useState([
     ...JSON.parse(sessionStorage.getItem("collabs") || "[]"),
   ]);
+
+  const setRepresentationMode = React?.useContext(currDocumentCtx)?.setRepresentationMode
+
+  const fileContext = React?.useContext(filesCtx);
+
+  const pdfName = fileContext?.pdfName;
+  const setPdfName = fileContext?.setPdfName;
+  const progressBar = fileContext?.progressBar;
 
   const theme = useTheme();
 
@@ -63,9 +74,12 @@ const FinishUpload = ({
   const screen900 = useMediaQuery(theme?.breakpoints?.down(900));
 
   const invitees = React?.useContext(usersCtx)?.users?.filter((user) => {
-    // console.log("current user to share with", user);
+    // console.log("currparseent user to share with", user);
 
-    return user?.id?.toString() !== sessionStorage?.getItem("userId");
+    return (
+      user?.id?.toString() !== sessionStorage?.getItem("userId") &&
+      !sessionStorage?.getItem("final-signee")?.includes(user?.fullName)
+    );
   });
 
   const ownDocuments = React?.useContext(documentsCtx)?.documents?.own || [];
@@ -89,8 +103,12 @@ const FinishUpload = ({
 
   // console.log("current folders here", folders);
 
+  const setLoadingMap = React?.useContext(guardCtx)?.setLoadingMap;
+
   const handleFolder = async (event, value) => {
     event?.preventDefault();
+
+    setLoadingMap(true, "finish_upload");
 
     // console.log("current folder search value", folder);
 
@@ -106,7 +124,7 @@ const FinishUpload = ({
       value?.name?.includes("Créer") &&
       defaultCreate?.replaceAll("Créer ", "")?.length > 0
     ) {
-      await lookup(`${process.env?.REACT_APP_API_HOST}/api/doc-folders`, {
+      await lookup(`${BASE_URL}/api/doc-folders`, {
         method: "POST",
         headers: _headers,
         body: JSON.stringify({
@@ -146,14 +164,46 @@ const FinishUpload = ({
       setFolder(value);
     }
 
+    setLoadingMap(false, "finish_upload");
+
     setDefaultCreate("");
+  };
+
+  const [finalSignee, setFinalSignee] = React?.useState({});
+
+  const handleFinalSignee = async (event, value) => {
+    event?.preventDefault();
+
+    sessionStorage?.setItem("final-signee", JSON.stringify(value));
+
+    setFinalSignee(value);
   };
 
   const [defaultCreate, setDefaultCreate] = React?.useState("");
 
+  const showWarning = React?.useContext(notificationCtx)?.showWarning;
+
+  const usersList = React?.useContext(usersCtx)?.users?.filter(
+    (user) =>
+      user?.id?.toString() !== sessionStorage?.getItem("userId") &&
+      !sessionStorage?.getItem("collabs")?.includes(user?.fullName)
+  );
+
+  React?.useEffect(() => {
+    const finalSigneeRaw = sessionStorage?.getItem("final-signee");
+
+    if (finalSigneeRaw?.length > 5) {
+      setRepresentationMode({
+        active: true,
+        finalSignee: JSON.parse(finalSigneeRaw),
+      });
+    }
+  }, [finalSignee]);
+
   return (
     <Box
-      id="FinishUpload"
+      key={renderingKey}
+      id={"FinishUpload"}
       sx={{
         width: "100%!important",
       }}
@@ -167,40 +217,71 @@ const FinishUpload = ({
           my: "1rem",
         }}
       >
-        <FormControlLabel
-          onClick={(event) => {
-            event?.preventDefault();
-
-            setIsFolded(!isFolded);
+        <Stack
+          direction={"row"}
+          sx={{
+            width: "100%",
+            alignItems: "center",
+            justifyContent: "flex-start",
+            my: "1rem",
           }}
-          control={<Switch checked={isFolded} />}
-          label={isFolded ? "Avec dossier" : "Sans dossier"}
-        />
-        <FormControl
-          variant="standard"
-          sx={{ minWidth: 220, mt: "1rem" }}
-          size={"small"}
         >
+          <FormControlLabel
+            onClick={(event) => {
+              event?.preventDefault();
+
+              setIsFolded(!isFolded);
+            }}
+            control={<Switch checked={isFolded} />}
+            label={isFolded ? "Avec dossier" : "Sans dossier"}
+          />
+          <FormControl variant="standard" sx={{ minWidth: 220 }} size={"small"}>
+            <Autocomplete
+              disabled={!isFolded}
+              size="small"
+              onChange={handleFolder}
+              id="checkboxes-tags-demo"
+              options={[...folders, { name: `Créer ${defaultCreate}`, id: -1 }]}
+              disableCloseOnSelect
+              getOptionLabel={(option) => `${option?.name}`}
+              renderOption={(props, option, { selected }) => (
+                <li
+                  {...props}
+                  disabled={option?.name === "Créer"}
+                >{`${option?.name}`}</li>
+              )}
+              style={{ width: "100%" }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Dossier"
+                  placeholder="Selectionner un dossier"
+                  onChange={(event) => {
+                    setDefaultCreate(event?.target?.value);
+                  }}
+                />
+              )}
+            />
+          </FormControl>
+        </Stack>
+
+        <FormControl variant="standard" sx={{ minWidth: 220 }} size={"small"}>
           <Autocomplete
-            disabled={!isFolded}
             size="small"
-            onChange={handleFolder}
+            onChange={handleFinalSignee}
             id="checkboxes-tags-demo"
-            options={[...folders, { name: `Créer ${defaultCreate}`, id: -1 }]}
+            options={usersList}
             disableCloseOnSelect
-            getOptionLabel={(option) => `${option?.name}`}
+            getOptionLabel={(option) => `${option?.fullName}`}
             renderOption={(props, option, { selected }) => (
-              <li
-                {...props}
-                disabled={option?.name === "Créer"}
-              >{`${option?.name}`}</li>
+              <li {...props}>{`${option?.fullName}`}</li>
             )}
             style={{ width: "100%" }}
             renderInput={(params) => (
               <TextField
                 {...params}
-                label="Dossier"
-                placeholder="Selectionner un dossier"
+                label="Signataire final"
+                placeholder="Selectionner le signataire final"
                 onChange={(event) => {
                   setDefaultCreate(event?.target?.value);
                 }}
@@ -383,11 +464,15 @@ const FinishUpload = ({
                   } else {
                     canProcess = false;
 
-                    alert("Selection un envelope ou décochez les envelopes");
+                    showWarning(
+                      "Selection un envelope ou décochez les envelopes"
+                    );
                   }
                 } catch (error) {
                   canProcess = false;
-                  alert("Selection un envelope ou décochez les envelopes");
+                  showWarning(
+                    "Selection un envelope ou décochez les envelopes"
+                  );
                 }
               }
 
@@ -395,7 +480,7 @@ const FinishUpload = ({
                 if (sessionStorage?.getItem("collabs")?.length > 5) {
                   nextMenu(params);
                 } else {
-                  alert("Veuillez choisir au moins un co-signataire");
+                  showWarning("Veuillez choisir au moins un co-signataire");
                 }
               }
             }}

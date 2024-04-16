@@ -20,6 +20,16 @@ const deleteObject = (_: MouseEvent, transform: fabric.Transform): boolean => {
     window?.sessionStorage?.removeItem("datePage");
   }
 
+  let displayObjects = JSON.parse(
+    sessionStorage?.getItem("display-initials") || "[]"
+  );
+
+  displayObjects = displayObjects?.filter((_target) => {
+    return _target?.signIndex !== target?._element?.currentSrc;
+  });
+
+  sessionStorage?.setItem("display-initials", JSON.stringify(displayObjects));
+
   canvas?.remove(target);
   canvas?.requestRenderAll();
 

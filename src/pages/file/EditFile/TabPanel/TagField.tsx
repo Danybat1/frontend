@@ -1,3 +1,6 @@
+// component definition
+import * as React from "react";
+
 /* eslint-disable no-param-reassign, no-underscore-dangle, func-names */
 import { useContext } from "react";
 
@@ -12,10 +15,17 @@ import {
 import SingImgContext from "../../../../context/SingImgContext";
 import { Box, Stack } from "@mui/material";
 import { currDocumentCtx } from "../../../../context/currDocument";
+import { notificationCtx } from "../../../../context/notification";
 
 const TagField = () => {
   // context
   const { canvas, focusCanvasIdx, getAddLocation } = useContext(SingImgContext);
+
+  const currentDocumentCtx = React?.useContext(currDocumentCtx);
+
+  const representationMode = currentDocumentCtx?.representationMode;
+
+  // console.log("current representation mode", representationMode);
 
   /* _CANVAS ADD TAG_ */
 
@@ -49,7 +59,7 @@ const TagField = () => {
         ?.toString();
 
       if (datePage?.length > 0 && dateIndex?.length > 0) {
-        alert(
+        showWarning(
           "Un signataire ne peut avoir qu'une seule date. Supprimer et rajouter"
         );
       } else {
@@ -64,6 +74,9 @@ const TagField = () => {
       canvas[focusCanvasIdx].setActiveObject(textbox);
     }
   };
+
+  const showSuccess = React?.useContext(notificationCtx)?.showSuccess;
+  const showWarning = React?.useContext(notificationCtx)?.showWarning;
 
   const clickAddGroupBox = (groupType: number) => {
     const cancelControls = (obj: fabric.Group | fabric.IText) => {
@@ -221,7 +234,9 @@ const TagField = () => {
 
     const editLabel = (group: fabric.Group) => {
       unGroup(group);
+
       canvas[focusCanvasIdx].setActiveObject(label);
+
       label.enterEditing();
       label.selectAll();
     };

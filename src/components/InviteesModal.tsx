@@ -72,7 +72,7 @@ const InviteesModal = ({
       modalContent
     )
   ) : (
-    <></>
+    ""
   );
 };
 
